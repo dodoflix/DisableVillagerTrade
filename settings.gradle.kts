@@ -14,5 +14,10 @@ rootProject.name = "DisableVillagerTrade"
 include("common")
 include("bukkit")
 include("fabric")
-include("forge")
 include("neoforge")
+
+// Forge doesn't work on macOS due to missing native libraries (lwjgl-freetype)
+val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
+if (!isMacOS) {
+    include("forge")
+}
