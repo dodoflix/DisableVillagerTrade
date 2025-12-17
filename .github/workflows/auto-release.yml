@@ -202,7 +202,7 @@ jobs:
           distribution: 'temurin'
       
       - name: Download Bukkit artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: bukkit-jar
           path: bukkit-build
@@ -292,7 +292,7 @@ jobs:
           distribution: 'temurin'
       
       - name: Download Fabric artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: fabric-jar
           path: fabric-build
@@ -365,7 +365,7 @@ jobs:
           distribution: 'temurin'
       
       - name: Download Forge artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: forge-jar
           path: forge-build
@@ -452,7 +452,7 @@ jobs:
           distribution: 'temurin'
       
       - name: Download NeoForge artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: neoforge-jar
           path: neoforge-build
@@ -522,7 +522,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
 
