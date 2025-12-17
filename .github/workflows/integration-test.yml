@@ -56,7 +56,8 @@ jobs:
           
           while IFS= read -r file; do
             if [[ "$file" == */src/main/* ]] || \
-               [[ "$file" == **/build.gradle.kts ]]; then
+               [[ "$file" == **/build.gradle.kts ]] || \
+               [[ "$file" == "gradle/libs.versions.toml" ]]; then
               SHOULD_TEST="true"
               echo "✅ Code file changed: $file"
               break
@@ -142,7 +143,7 @@ jobs:
         run: |
           mkdir -p test-server/plugins
           
-          MC_VERSION=$(grep "^minecraftVersion=" gradle.properties | cut -d'=' -f2 | tr -d '\r\n')
+          MC_VERSION=$(grep -E '^minecraft = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
           echo "Building for Minecraft $MC_VERSION"
           
           PAPER_BUILD=$(curl -s "https://api.papermc.io/v2/projects/paper/versions/${MC_VERSION}/builds" 2>/dev/null | jq -r '.builds[-1].build' 2>/dev/null)
@@ -227,7 +228,7 @@ jobs:
         run: |
           mkdir -p test-server/mods
           
-          MC_VERSION=$(grep "^minecraftVersion=" gradle.properties | cut -d'=' -f2 | tr -d '\r\n')
+          MC_VERSION=$(grep -E '^minecraft = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
           echo "Building for Minecraft $MC_VERSION"
           
           curl -o fabric-installer.jar "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar"
@@ -300,7 +301,7 @@ jobs:
       - name: Download Forge server
         run: |
           mkdir -p test-server/mods
-          FORGE_VERSION=$(grep "^forgeVersion=" gradle.properties | cut -d'=' -f2 | tr -d '\r\n')
+          FORGE_VERSION=$(grep -E '^forge = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
           echo "Using Forge version: $FORGE_VERSION"
           
           FORGE_URL="https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar"
@@ -380,7 +381,7 @@ jobs:
       - name: Download NeoForge server
         run: |
           mkdir -p test-server/mods
-          NEOFORGE_VERSION=$(grep "^neoforgeVersion=" gradle.properties | cut -d'=' -f2 | tr -d '\r\n')
+          NEOFORGE_VERSION=$(grep '^neoforge = ' gradle/libs.versions.toml | cut -d'"' -f2)
           echo "Using NeoForge version: $NEOFORGE_VERSION"
           
           NEOFORGE_URL="https://maven.neoforged.net/releases/net/neoforged/neoforge/${NEOFORGE_VERSION}/neoforge-${NEOFORGE_VERSION}-installer.jar"

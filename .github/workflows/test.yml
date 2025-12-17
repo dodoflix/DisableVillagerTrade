@@ -70,6 +70,7 @@ jobs:
                [[ "$file" == "build.gradle.kts" ]] || \
                [[ "$file" == "settings.gradle.kts" ]] || \
                [[ "$file" == "gradle.properties" ]] || \
+               [[ "$file" == "gradle/libs.versions.toml" ]] || \
                [[ "$file" == */build.gradle.kts ]]; then
               SHOULD_TEST="true"
               echo "✅ Code file changed: $file"
