@@ -7,7 +7,7 @@ fabric-loader = "0.18.1"
 fabric-api = "0.138.3+1.21.10"
 
 # Forge
-forge = "1.21.10-60.1.5"
+forge = "1.21.11-61.0.3"
 
 # NeoForge
 neoforge = "21.10.64"
