@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "baseBranches": ["develop"],
+  "labels": ["dependencies"],
+  "schedule": ["before 9am on monday"],
+  "prHourlyLimit": 5,
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "matchManagers": ["gradle"],
+      "labels": ["dependencies", "gradle"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "labels": ["dependencies", "github-actions"]
+    },
+    {
+      "description": "Group all Minecraft/mod dependencies",
+      "matchPackagePatterns": [
+        "^net\\.fabricmc",
+        "^net\\.minecraftforge",
+        "^net\\.neoforged",
+        "^org\\.spigotmc"
+      ],
+      "groupName": "Minecraft mod dependencies"
+    },
+    {
+      "description": "Group all test dependencies",
+      "matchPackagePatterns": [
+        "^org\\.junit",
+        "^org\\.mockito"
+      ],
+      "groupName": "Test dependencies"
+    }
+  ],
+  "registryAliases": {
+    "fabric-maven": "https://maven.fabricmc.net/",
+    "forge-maven": "https://maven.minecraftforge.net/",
+    "neoforge-maven": "https://maven.neoforged.net/releases/",
+    "spigot-maven": "https://hub.spigotmc.org/nexus/content/repositories/snapshots/",
+    "sonatype-snapshots": "https://oss.sonatype.org/content/repositories/snapshots/",
+    "architectury-maven": "https://maven.architectury.dev/"
+  },
+  "gradle": {
+    "fileMatch": [
+      "(^|/)build\\.gradle\\.kts$",
+      "(^|/)settings\\.gradle\\.kts$",
+      "(^|/)gradle\\.properties$",
+      "(^|/)gradle/libs\\.versions\\.toml$"
+    ]
+  }
+}
+
