@@ -1,10 +1,10 @@
 plugins {
-    id("fabric-loom") version "1.13-SNAPSHOT"
+    alias(libs.plugins.fabric.loom)
 }
 
-val minecraftVersion: String by project
-val fabricLoaderVersion: String by project
-val fabricApiVersion: String by project
+// Extract versions from catalog for use in tasks
+val minecraftVersion = libs.versions.minecraft.get()
+val fabricLoaderVersion = libs.versions.fabric.loader.get()
 
 base {
     archivesName.set("DisableVillagerTrade-Fabric")
@@ -15,10 +15,10 @@ repositories {
 }
 
 dependencies {
-    minecraft("com.mojang:minecraft:$minecraftVersion")
+    minecraft(libs.minecraft)
     mappings(loom.officialMojangMappings())
-    modImplementation("net.fabricmc:fabric-loader:$fabricLoaderVersion")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
+    modImplementation(libs.fabric.loader)
+    modImplementation(libs.fabric.api)
     
     implementation(project(":common"))
     include(project(":common"))

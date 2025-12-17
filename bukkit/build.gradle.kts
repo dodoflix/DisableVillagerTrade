@@ -1,9 +1,7 @@
 plugins {
     `java-library`
-    id("com.gradleup.shadow")
+    alias(libs.plugins.shadow)
 }
-
-val spigotApiVersion: String by project
 
 base {
     archivesName.set("DisableVillagerTrade-Bukkit")
@@ -21,14 +19,14 @@ repositories {
 dependencies {
     implementation(project(":common"))
     
-    compileOnly("org.spigotmc:spigot-api:$spigotApiVersion")
+    compileOnly(libs.spigot.api)
     
-    testImplementation("org.junit.jupiter:junit-jupiter:6.0.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:6.0.1")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("org.mockito:mockito-core:5.21.0")
-    testImplementation("org.mockito:mockito-junit-jupiter:5.21.0")
-    testImplementation("org.spigotmc:spigot-api:$spigotApiVersion")
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter.params)
+    testRuntimeOnly(libs.junit.platform.launcher)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.junit.jupiter)
+    testImplementation(libs.spigot.api)
 }
 
 tasks {
