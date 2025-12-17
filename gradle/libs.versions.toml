@@ -17,7 +17,7 @@ spigot-api = "1.21.4-R0.1-SNAPSHOT"
 
 # Plugins
 fabric-loom = "1.13-SNAPSHOT"
-neoforge-moddev = "2.0.124"
+neoforge-moddev = "2.0.126"
 shadow = "9.3.0"
 
 # Testing
