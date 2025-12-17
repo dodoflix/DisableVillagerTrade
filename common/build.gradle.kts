@@ -11,8 +11,8 @@ dependencies {
     // Only pure Java code for shared logic
     
     // Test dependencies
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.11.3")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.0.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:6.0.1")
 }
 
 tasks {
