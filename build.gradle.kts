@@ -1,6 +1,6 @@
 plugins {
     java
-    id("com.gradleup.shadow") version "9.3.0" apply false
+    alias(libs.plugins.shadow) apply false
     jacoco
 }
 
@@ -30,6 +30,13 @@ subprojects {
     }
 
     repositories {
+        // Minecraft libraries repo for LWJGL natives (needed for Forge on macOS)
+        maven("https://libraries.minecraft.net/") {
+            name = "Minecraft Libraries"
+            content {
+                includeGroup("org.lwjgl")
+            }
+        }
         mavenCentral()
     }
 

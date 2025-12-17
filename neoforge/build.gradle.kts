@@ -1,9 +1,11 @@
 plugins {
-    id("net.neoforged.moddev") version "2.0.122"
+    alias(libs.plugins.neoforge.moddev)
 }
 
-val minecraftVersion: String by project
-val neoforgeVersion: String by project
+// Extract versions from catalog using explicit API (required for NeoForge plugin compatibility)
+val catalog = versionCatalogs.named("libs")
+val minecraftVersion = catalog.findVersion("minecraft").get().requiredVersion
+val neoforgeVersion = catalog.findVersion("neoforge").get().requiredVersion
 
 base {
     archivesName.set("DisableVillagerTrade-NeoForge")

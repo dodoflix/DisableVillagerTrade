@@ -1,0 +1,51 @@
+[versions]
+# Minecraft
+minecraft = "1.21.10"
+
+# Fabric
+fabric-loader = "0.18.1"
+fabric-api = "0.138.3+1.21.10"
+
+# Forge
+forge = "1.21.10-60.1.5"
+
+# NeoForge
+neoforge = "21.10.64"
+
+# Bukkit/Spigot
+spigot-api = "1.21.4-R0.1-SNAPSHOT"
+
+# Plugins
+fabric-loom = "1.13-SNAPSHOT"
+neoforge-moddev = "2.0.126"
+shadow = "9.3.0"
+
+# Testing
+junit = "6.0.1"
+mockito = "5.21.0"
+
+[libraries]
+# Minecraft
+minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
+
+# Fabric
+fabric-loader = { module = "net.fabricmc:fabric-loader", version.ref = "fabric-loader" }
+fabric-api = { module = "net.fabricmc.fabric-api:fabric-api", version.ref = "fabric-api" }
+
+# Forge
+forge = { module = "net.minecraftforge:forge", version.ref = "forge" }
+
+# Bukkit/Spigot
+spigot-api = { module = "org.spigotmc:spigot-api", version.ref = "spigot-api" }
+
+# Testing
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
+
+[plugins]
+fabric-loom = { id = "fabric-loom", version.ref = "fabric-loom" }
+neoforge-moddev = { id = "net.neoforged.moddev", version.ref = "neoforge-moddev" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

@@ -70,6 +70,7 @@ jobs:
                [[ "$file" == "build.gradle.kts" ]] || \
                [[ "$file" == "settings.gradle.kts" ]] || \
                [[ "$file" == "gradle.properties" ]] || \
+               [[ "$file" == "gradle/libs.versions.toml" ]] || \
                [[ "$file" == */build.gradle.kts ]]; then
               SHOULD_TEST="true"
               echo "✅ Code file changed: $file"
@@ -114,28 +115,28 @@ jobs:
           echo "✅ All platforms built!"
 
       - name: Upload Bukkit artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: DisableVillagerTrade-Bukkit
           path: bukkit/build/libs/*.jar
           retention-days: 7
 
       - name: Upload Fabric artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: DisableVillagerTrade-Fabric
           path: fabric/build/libs/*.jar
           retention-days: 7
 
       - name: Upload Forge artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: DisableVillagerTrade-Forge
           path: forge/build/libs/*.jar
           retention-days: 7
 
       - name: Upload NeoForge artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: DisableVillagerTrade-NeoForge
           path: neoforge/build/libs/*.jar
@@ -143,7 +144,7 @@ jobs:
 
       - name: Upload test results on failure
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: test-results
           path: '**/build/reports/tests/'

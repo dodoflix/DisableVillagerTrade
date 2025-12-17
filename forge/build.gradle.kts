@@ -1,10 +1,11 @@
 plugins {
     id("net.minecraftforge.gradle") version "[6.0.16,6.2)"
-    id("com.gradleup.shadow")
+    alias(libs.plugins.shadow)
 }
 
-val minecraftVersion: String by project
-val forgeVersion: String by project
+// Extract versions from catalog for use in plugin DSLs
+val minecraftVersion = libs.versions.minecraft.get()
+val forgeVersion = libs.versions.forge.get()
 
 base {
     archivesName.set("DisableVillagerTrade-Forge")
@@ -49,7 +50,7 @@ repositories {
 }
 
 dependencies {
-    minecraft("net.minecraftforge:forge:$forgeVersion")
+    minecraft(libs.forge)
     
     // Include common module
     implementation(project(":common"))
@@ -58,10 +59,11 @@ dependencies {
 
 tasks {
     processResources {
+        val forgeVersionOnly = forgeVersion.split("-")[1]
         val props = mapOf(
             "version" to project.version,
             "minecraft_version" to minecraftVersion,
-            "forge_version" to forgeVersion.split("-")[1]
+            "forge_version" to forgeVersionOnly
         )
         inputs.properties(props)
         filesMatching("META-INF/mods.toml") {
