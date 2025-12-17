@@ -32,16 +32,21 @@
   ],
   "packageRules": [
     {
-      "matchManagers": ["gradle"],
+      "matchCategories": ["java"],
       "labels": ["dependencies", "gradle"]
     },
     {
-      "matchManagers": ["github-actions"],
+      "matchCategories": ["ci"],
       "labels": ["dependencies", "github-actions"]
     },
     {
+      "description": "Minecraft (Mojang) - not available via Maven, managed by mod loaders",
+      "matchPackageNames": ["/^com\\.mojang/"],
+      "enabled": false
+    },
+    {
       "description": "Fabric dependencies",
-      "matchPackagePatterns": ["^net\\.fabricmc"],
+      "matchPackageNames": ["/^net\\.fabricmc/"],
       "registryUrls": [
         "https://maven.fabricmc.net/",
         "https://repo.maven.apache.org/maven2/"
@@ -50,7 +55,7 @@
     },
     {
       "description": "Forge dependencies and plugins",
-      "matchPackagePatterns": ["^net\\.minecraftforge"],
+      "matchPackageNames": ["/^net\\.minecraftforge/"],
       "registryUrls": [
         "https://maven.minecraftforge.net/",
         "https://repo.maven.apache.org/maven2/"
@@ -59,7 +64,7 @@
     },
     {
       "description": "NeoForge dependencies",
-      "matchPackagePatterns": ["^net\\.neoforged"],
+      "matchPackageNames": ["/^net\\.neoforged/"],
       "registryUrls": [
         "https://maven.neoforged.net/releases/",
         "https://repo.maven.apache.org/maven2/"
@@ -68,7 +73,7 @@
     },
     {
       "description": "Spigot dependencies",
-      "matchPackagePatterns": ["^org\\.spigotmc"],
+      "matchPackageNames": ["/^org\\.spigotmc/"],
       "registryUrls": [
         "https://hub.spigotmc.org/nexus/content/repositories/snapshots/",
         "https://repo.maven.apache.org/maven2/"
@@ -76,17 +81,8 @@
       "groupName": "Spigot dependencies"
     },
     {
-      "description": "Minecraft (Mojang)",
-      "matchPackagePatterns": ["^com\\.mojang"],
-      "registryUrls": [
-        "https://libraries.minecraft.net/",
-        "https://repo.maven.apache.org/maven2/"
-      ],
-      "groupName": "Minecraft dependencies"
-    },
-    {
       "description": "Fabric Loom plugin",
-      "matchPackagePatterns": ["^fabric-loom"],
+      "matchPackageNames": ["/^fabric-loom/"],
       "registryUrls": [
         "https://maven.fabricmc.net/",
         "https://plugins.gradle.org/m2/"
@@ -95,12 +91,12 @@
     },
     {
       "description": "JaCoCo plugin - ignore (managed by Gradle)",
-      "matchPackagePatterns": ["^org\\.jacoco"],
+      "matchPackageNames": ["/^org\\.jacoco/"],
       "enabled": false
     },
     {
       "description": "Group all test dependencies",
-      "matchPackagePatterns": ["^org\\.junit", "^org\\.mockito"],
+      "matchPackageNames": ["/^org\\.junit/", "/^org\\.mockito/"],
       "registryUrls": ["https://repo.maven.apache.org/maven2/"],
       "groupName": "Test dependencies"
     }
