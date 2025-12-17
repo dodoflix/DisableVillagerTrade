@@ -30,6 +30,13 @@ subprojects {
     }
 
     repositories {
+        // Minecraft libraries repo for LWJGL natives (needed for Forge on macOS)
+        maven("https://libraries.minecraft.net/") {
+            name = "Minecraft Libraries"
+            content {
+                includeGroup("org.lwjgl")
+            }
+        }
         mavenCentral()
     }
 
