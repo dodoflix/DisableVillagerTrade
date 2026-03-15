@@ -1,28 +1,29 @@
 [versions]
 # Minecraft
-minecraft = "1.21.10"
+minecraft = "1.21.11"
 
 # Fabric
-fabric-loader = "0.18.1"
-fabric-api = "0.138.3+1.21.10"
+fabric-api = "0.139.4+1.21.11"
+fabric-loader = "0.18.4"
 
 # Forge
-forge = "1.21.10-60.1.5"
+forge = "1.21.11-61.0.3"
 
 # NeoForge
-neoforge = "21.10.64"
+neoforge = "21.11.38-beta"
+neoforge-mc = "1.21.11"
 
 # Bukkit/Spigot
-spigot-api = "1.21.4-R0.1-SNAPSHOT"
+spigot-api = "1.21.11-R0.1-SNAPSHOT"
 
 # Plugins
-fabric-loom = "1.13-SNAPSHOT"
-neoforge-moddev = "2.0.126"
-shadow = "9.3.0"
+fabric-loom = "1.15.5"
+neoforge-moddev = "2.0.140"
+shadow = "9.4.0"
 
 # Testing
 junit = "6.0.1"
-mockito = "5.21.0"
+mockito = "5.23.0"
 
 [libraries]
 # Minecraft

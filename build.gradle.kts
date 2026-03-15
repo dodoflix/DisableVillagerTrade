@@ -1,6 +1,5 @@
 plugins {
     java
-    alias(libs.plugins.shadow) apply false
     jacoco
 }
 
@@ -20,6 +19,7 @@ allprojects {
     version = modVersion
 }
 
+// Applies to `common` (the only subproject)
 subprojects {
     apply(plugin = "java")
 
@@ -30,13 +30,6 @@ subprojects {
     }
 
     repositories {
-        // Minecraft libraries repo for LWJGL natives (needed for Forge on macOS)
-        maven("https://libraries.minecraft.net/") {
-            name = "Minecraft Libraries"
-            content {
-                includeGroup("org.lwjgl")
-            }
-        }
         mavenCentral()
     }
 
@@ -51,10 +44,10 @@ subprojects {
     }
 }
 
-// Apply JaCoCo only to testable modules (common, bukkit)
-configure(subprojects.filter { it.name in listOf("common", "bukkit") }) {
+// JaCoCo for common
+configure(subprojects.filter { it.name == "common" }) {
     apply(plugin = "jacoco")
-    
+
     tasks.withType<JacocoReport> {
         reports {
             xml.required.set(true)
