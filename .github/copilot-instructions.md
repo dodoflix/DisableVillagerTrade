@@ -46,6 +46,29 @@ Delegate each phase to the right specialised agent. Never do in main context wha
 
 ---
 
+### Reference Consistency Check
+
+**After every change — before committing — scan for stale references.**
+
+Any time you rename, move, or change the behaviour of something, other files may refer to the old name or old behaviour. Use `grep` to find them:
+
+```bash
+# Find all references to a renamed file, class, method, or concept
+grep -r "old-name" . --include="*.md" --include="*.java" --include="*.yml" --include="*.toml"
+```
+
+Things to check after common change types:
+
+- **File renamed** → grep the old filename across all `.md`, `.yml`, `.java`, `.toml` files
+- **Class/method renamed** → grep the old name across source + docs
+- **Config key changed** → grep the old key in docs, plugin.yml, README, copilot instructions
+- **Workflow renamed** → grep the old workflow name in README, CONTRIBUTING, copilot instructions, badge URLs
+- **New feature added** → check if README, CHANGELOG, or copilot instructions need updating
+
+**Fix every stale reference in the same commit as the original change.** A commit that renames something but leaves dangling references is incomplete.
+
+---
+
 ### TDD — Test-Driven Development
 
 All logic in `common/` **must** follow TDD. Platform wiring (listeners, mixins) uses mocks.
@@ -73,18 +96,7 @@ Never skip step 2 — a test that never fails proves nothing.
 
 ---
 
-## File Sync Rules
 
-When any of the files below are updated, you **must** also update all listed dependents in the same commit:
-
-| File changed | Also update |
-|---|---|
-| `.github/workflows/ci.yml` or `cd.yml` renamed/replaced | This file's **CI/CD** section; `README.md` badge URLs |
-| `README.md` CI/CD badge URLs | Verify workflow file names match actual `.github/workflows/` contents |
-| `gradle.properties` (`modVersion`) | No additional sync needed — version is source of truth |
-| `CHANGELOG.md` | Verify version matches latest git tag |
-
----
 
 ## Project Overview
 
