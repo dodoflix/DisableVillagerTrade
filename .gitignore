@@ -113,12 +113,12 @@ buildNumber.properties
 .gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
+!bukkit/gradle/wrapper/gradle-wrapper.jar
+!fabric/gradle/wrapper/gradle-wrapper.jar
+!forge/gradle/wrapper/gradle-wrapper.jar
+!neoforge/gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-
-# Gradle wrapper (don't ignore - we want this in repo)
-# !gradle/wrapper/gradle-wrapper.jar
-# !gradle/wrapper/gradle-wrapper.properties
 
 # Common working directory
 run/
