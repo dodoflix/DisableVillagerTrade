@@ -4,6 +4,19 @@
 
 ---
 
+## File Sync Rules
+
+When any of the files below are updated, you **must** also update all listed dependents in the same commit:
+
+| File changed | Also update |
+|---|---|
+| `.github/workflows/ci.yml` or `cd.yml` renamed/replaced | This file's **CI/CD** section; `README.md` badge URLs |
+| `README.md` CI/CD badge URLs | Verify workflow file names match actual `.github/workflows/` contents |
+| `gradle.properties` (`modVersion`) | No additional sync needed — version is source of truth |
+| `CHANGELOG.md` | Verify version matches latest git tag |
+
+---
+
 ## Project Overview
 
 A lightweight, multi-platform Minecraft mod/plugin that prevents players from trading with villagers. Supports **Bukkit/Spigot/Paper**, **Fabric**, **Forge**, and **NeoForge** from a single shared core.
@@ -158,7 +171,7 @@ Format: `should<Outcome>_when<Condition>`
 
 ## Conventional Commits
 
-Every commit message **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. The `auto-release.yml` caller (via `mc-multiplatform-toolkit`) parses commit messages to determine the next version, so correct types are critical.
+Every commit message **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. The `cd.yml` caller (via `mc-multiplatform-toolkit`) parses commit messages to determine the next version, so correct types are critical.
 
 ### Format
 
@@ -239,7 +252,7 @@ Do **not** add `Co-authored-by:` or any automated-author trailers to commit mess
 Workflows are **thin callers** delegating to [`mc-multiplatform-toolkit`](https://github.com/dodoflix/mc-multiplatform-toolkit):
 
 - **ci.yml** — calls `mc-multiplatform-toolkit/.github/workflows/ci.yml@main`; runs unit tests, parallel platform builds, and integration tests
-- **auto-release.yml** — calls `mc-multiplatform-toolkit/.github/workflows/release.yml@main`; automated versioning and Modrinth publishing; version bump is derived from commit types (see Conventional Commits above)
+- **cd.yml** — calls `mc-multiplatform-toolkit/.github/workflows/cd.yml@main`; automated versioning and Modrinth publishing; version bump is derived from commit types (see Conventional Commits above)
 
 **Never edit CI logic directly in this repo.** Changes to build/test/release logic go in the toolkit repo (`~/Projects/mc-multiplatform-toolkit`). This project's workflow files are ≤ 25 lines each.
 
