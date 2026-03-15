@@ -12,11 +12,11 @@ Disable villager trade on your Minecraft server! Now supports **multiple platfor
 
 | Platform | Minecraft Version | Status |
 |----------|-------------------|--------|
-| **Bukkit/Spigot/Paper** | 1.14 - 1.21.10+ | ✅ Full Support |
-| **Fabric** | 1.21.10 | ✅ Full Support |
-| **Forge** | 1.21.10 | ✅ Full Support |
+| **Bukkit/Spigot/Paper** | 1.14 - 1.21.11+ | ✅ Full Support |
+| **Fabric** | 1.21.11 | ✅ Full Support |
+| **Forge** | 1.21.11 | ✅ Full Support |
 | **NeoForge** | 1.21.10 | ✅ Full Support |
-| **Quilt** | 1.21.10 | ✅ Use Fabric version |
+| **Quilt** | 1.21.11 | ✅ Use Fabric version |
 
 > **Note:** Quilt is compatible with Fabric mods. Simply use the Fabric version on Quilt servers/clients.
 
@@ -143,21 +143,18 @@ notify_on_join = true
 
 ## 🏗️ Building from Source
 
-This is a multi-module Gradle project. To build all platforms:
+This is a composite multi-module Gradle project. Each platform has its own Gradle wrapper.
 
 ```bash
 # Clone the repository
 git clone https://github.com/dodoflix/DisableVillagerTrade.git
 cd DisableVillagerTrade
 
-# Build all modules
-./gradlew build
-
-# Build specific platform
-./gradlew :bukkit:build
-./gradlew :fabric:build
-./gradlew :forge:build
-./gradlew :neoforge:build
+# Build all platforms
+cd bukkit && ./gradlew shadowJar --no-daemon && cd ..
+cd fabric && ./gradlew build --no-daemon && cd ..
+cd forge && ./gradlew shadowJar --no-daemon && cd ..
+cd neoforge && ./gradlew build --no-daemon && cd ..
 ```
 
 Build outputs will be in:

@@ -29,21 +29,62 @@ develop → master
 
 ### Prerequisites
 
-- Java 21 or higher
-- Maven 3.6+
-- A Spigot/Paper test server (optional, for testing)
+- Java 21
+- Git
+
+### Project Structure
+
+This is a **composite multi-module Gradle project**. Each platform is an independent Gradle build that references `common` via composite build substitution.
+
+```
+DisableVillagerTrade/
+├── common/        ← Platform-agnostic core logic (no platform deps)
+├── bukkit/        ← Bukkit/Spigot/Paper implementation
+├── fabric/        ← Fabric (Quilt-compatible) implementation
+├── forge/         ← Forge implementation
+├── neoforge/      ← NeoForge implementation
+└── gradle/
+    └── libs.versions.toml  ← Central version catalog for all platforms
+```
+
+All business logic belongs in `common/`. Platform modules only wire platform APIs to the common core.
 
 ### Building
 
+Each platform has its own Gradle wrapper. Build from the platform directory:
+
 ```bash
-mvn clean package
+# Build Bukkit (Gradle 8)
+cd bukkit && ./gradlew shadowJar --no-daemon
+
+# Build Fabric (Gradle 9)
+cd fabric && ./gradlew build --no-daemon
+
+# Build Forge (Gradle 8)
+cd forge && ./gradlew shadowJar --no-daemon
+
+# Build NeoForge (Gradle 8)
+cd neoforge && ./gradlew build --no-daemon
 ```
 
-The compiled JAR will be in the `target/` directory.
+Build outputs are in `<platform>/build/libs/`.
+
+### Running Tests
+
+```bash
+# Common module tests
+cd common && ./gradlew test --no-daemon
+
+# Bukkit module tests
+cd bukkit && ./gradlew test --no-daemon
+
+# Or run all tests from root (runs common + bukkit)
+./gradlew test --no-daemon
+```
 
 ## Commit Message Convention
 
-This project uses **Conventional Commits** for automatic versioning and changelog generation. Please follow this format for your commit messages:
+This project uses **Conventional Commits** for automatic versioning and changelog generation.
 
 ### Format
 
@@ -55,190 +96,121 @@ This project uses **Conventional Commits** for automatic versioning and changelo
 [optional footer]
 ```
 
-### Types
+### Types & Version Bumps
 
 | Type | Description | Version Bump |
 |------|-------------|--------------|
-| `feat` | A new feature | Minor (1.0.0 → 1.1.0) |
-| `fix` | A bug fix | Patch (1.0.0 → 1.0.1) |
-| `docs` | Documentation only changes | Patch |
-| `style` | Code style changes (formatting, etc.) | Patch |
-| `refactor` | Code refactoring | Patch |
-| `perf` | Performance improvements | Patch |
-| `test` | Adding or updating tests | Patch |
-| `chore` | Maintenance tasks | Patch |
+| `feat` | A new user-facing feature | Minor |
+| `fix` | A bug fix | Patch |
+| `perf` | Performance improvement | Patch |
+| `revert` | Reverting a previous commit | Patch |
+| `refactor` | Code restructuring, no behavior change | None |
+| `test` | Adding or fixing tests only | None |
+| `docs` | Documentation only | None |
+| `chore` | Maintenance (deps, build, config) | None |
+| `ci` | CI/CD workflow changes | None |
 
-### Breaking Changes
+A `BREAKING CHANGE:` footer or `!` after the type triggers a **Major** bump.
 
-For breaking changes that require a **major** version bump, either:
+### Scopes
 
-- Add `!` after the type: `feat!: remove deprecated API`
-- Include `BREAKING CHANGE:` in the commit body
+Use the platform name as scope for platform-specific changes:
+
+| Scope | Applies to |
+|-------|-----------|
+| `bukkit` | `bukkit/` module |
+| `fabric` | `fabric/` module |
+| `forge` | `forge/` module |
+| `neoforge` | `neoforge/` module |
+| `common` | `common/` module |
+| `deps` | Dependency updates |
+| `ci` | Workflow files |
 
 ### Examples
 
-```bash
-# New feature (minor bump)
-feat: add support for wandering traders
+```
+feat(bukkit): add per-world trade blocking configuration
+fix(forge): prevent NPE when villager profession is null
+refactor(common): extract profession check into dedicated method
+test(common): add parameterized tests for TradeBlocker world list logic
+chore(deps): bump neoforge-moddev from 2.0.126 to 2.0.134
+docs: update installation instructions for multi-platform setup
+```
 
-# Bug fix (patch bump)
-fix: resolve null pointer when config is empty
+### Breaking Changes
 
-# Feature with scope
-feat(config): add per-biome disable option
+```
+feat!: rename permission node
 
-# Breaking change (major bump)
-feat!: change config format from YAML to JSON
-
-# With body and footer
-fix: prevent trade window from opening
-
-The trade window was still briefly visible before closing.
-This fix prevents the event entirely.
-
-Closes #42
+BREAKING CHANGE: disablevillagertrade.bypass renamed to disablevillagertrade.admin.bypass
 ```
 
 ## Pull Request Process
 
 1. **Create a descriptive PR title** following the commit convention format
-2. **Fill out the PR template** with relevant information
-3. **Ensure all checks pass** (build, tests if applicable)
-4. **Request a review** from maintainers
-
-### PR Title Examples
-
-- `feat: add configurable cooldown message`
-- `fix: correct world name comparison`
-- `docs: update installation instructions`
-
-## Project Structure
-
-```
-src/main/java/me/dodo/disablevillagertrade/
-├── DisableVillagerTrade.java    # Main plugin class
-├── config/
-│   └── PluginConfig.java        # Configuration handling
-├── listeners/
-│   └── VillagerTradeListener.java  # Event listener
-└── logic/
-    └── TradeBlocker.java        # Core business logic (testable)
-```
+2. **Ensure all checks pass** — Tests & Build + Integration Tests must be green
+3. **Request a review** from maintainers
 
 ## Code Style
 
-- Follow existing code conventions in the project
-- Use meaningful variable and method names
-- Add JavaDocs for public methods
-- Keep methods focused and concise
-- Separate business logic from Bukkit code for testability
-
-## Testing
-
-Before submitting a PR:
-
-1. Run tests: `mvn test`
-2. Build the project: `mvn clean package`
-3. Test the plugin on a local Spigot/Paper server
-4. Verify your changes work as expected
-5. Check for any console errors or warnings
-
-**Note:** All PRs must pass the automated test suite.
+- Java 21, no Kotlin, no records
+- Private fields with public getters/setters — no public fields
+- All `public` classes and `public`/`protected` methods require Javadoc
+- Test method naming: `should<Outcome>_when<Condition>`
+- Use `@Nested` classes to group related test scenarios
+- Mock platform APIs with Mockito — never use real platform APIs in unit tests
 
 ## Code Coverage
 
-This project enforces a **minimum 90% code coverage** on testable code.
+JaCoCo coverage is enforced for `common` and `bukkit` modules.
 
 ### Running Coverage Locally
 
 ```bash
-# Run tests with coverage report
-mvn test
+cd common && ./gradlew test jacocoTestReport --no-daemon
+# Report: common/build/reports/jacoco/test/html/index.html
 
-# View coverage report
-open target/site/jacoco/index.html
-
-# Verify coverage threshold
-mvn jacoco:check
+cd bukkit && ./gradlew test jacocoTestReport --no-daemon
+# Report: bukkit/build/reports/jacoco/test/html/index.html
 ```
 
-### Coverage Rules
+Coverage reports are uploaded to Codecov on every PR.
 
-| Rule | Threshold |
-|------|-----------|
-| Instruction Coverage | ≥ 90% |
+## Adding a New Feature
 
-### What's Covered
-
-The following classes must maintain 90%+ coverage:
-
-- `PluginConfig` - Configuration handling
-- `ConfigMigrator` - Config migration logic
-- `TradeBlocker` - Core trade blocking logic
-- `UpdateNotifyListener` - Update notification logic
-
-### What's Excluded
-
-Some classes are excluded from coverage requirements because they depend on Bukkit runtime:
-
-- `DisableVillagerTrade` - Main plugin lifecycle
-- `VillagerTradeListener` - Direct Bukkit entity interaction
-- `UpdateChecker` - Bukkit scheduler and HTTP calls
-
-### Writing Testable Code
-
-To maintain high coverage:
-
-1. **Separate business logic** from Bukkit API calls (see `TradeBlocker`)
-2. **Use dependency injection** for testability
-3. **Mock external dependencies** using Mockito
-4. **Test edge cases** and error conditions
-
-### Coverage Enforcement
-
-- ❌ PRs will fail CI if coverage drops below 90%
-- ✅ Coverage reports are generated on every PR
-- 📊 Codecov provides coverage diff on PRs
+1. Implement logic in `common/` — add to `ModConfig` interface if config is needed
+2. Add unit tests in `common/` covering all branches
+3. Implement `ModConfig` method in each platform's config class
+4. Wire into the relevant listener/handler for each platform
+5. Update `plugin.yml` (Bukkit), `fabric.mod.json` (Fabric), or Forge/NeoForge resources as needed
 
 ## Reporting Issues
 
 When reporting bugs, please include:
 
-- Minecraft version
-- Server software and version (Spigot, Paper, etc.)
-- Plugin version
+- Minecraft version and platform (Bukkit/Fabric/Forge/NeoForge)
+- Mod/plugin version
 - Steps to reproduce
 - Expected vs actual behavior
 - Relevant console logs/errors
 
 ## Release Pipeline (For Maintainers)
 
-This project uses a **two-branch model** with automatic releases:
-
-```
-develop → master
-```
-
 | Branch | Purpose | Version | Published To |
 |--------|---------|---------|--------------|
 | `develop` | 🔧 Development builds | `1.2.3-dev.456` | GitHub (pre-release) |
 | `master` | 🚀 Stable releases | `1.2.3` | GitHub + Modrinth |
 
-### Release Workflow
-
-1. **Develop** on `develop` branch → automatic dev builds on GitHub
-2. **Release** by merging `develop` → `master` → stable release to GitHub + Modrinth
-
-### Release Platform Setup
+Merge `develop` → `master` to trigger a stable release.
 
 <details>
-<summary><b>🔧 Setup Instructions</b></summary>
+<summary><b>🔧 Required Secrets & Variables</b></summary>
 
 #### Repository Variables (Settings → Secrets and variables → Actions → Variables)
 
 | Variable | Description |
 |----------|-------------|
-| `MODRINTH_PROJECT_ID` | Your Modrinth project ID (found in project URL or settings) |
+| `MODRINTH_PROJECT_ID` | Your Modrinth project ID |
 
 #### Repository Secrets (Settings → Secrets and variables → Actions → Secrets)
 
