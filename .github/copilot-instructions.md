@@ -134,9 +134,9 @@ All business logic lives in `common/`. Platform modules only wire platform APIs 
 me.dodo.disablevillagertrade
 ├── common.*          ← shared interfaces, logic, utilities
 ├── bukkit.*          ← Bukkit-specific (listeners/, commands/, config/, update/)
-├── fabric.*          ← Fabric-specific (mixin/, config/)
-├── forge.*           ← Forge-specific (events/, config/)
-└── neoforge.*        ← NeoForge-specific (events/, config/)
+├── fabric.*          ← Fabric-specific (mixin/, config/, commands/)
+├── forge.*           ← Forge-specific (events/, config/, commands/)
+└── neoforge.*        ← NeoForge-specific (events/, config/, commands/)
 ```
 
 Sub-package names mirror each other across platforms (e.g. `*.config`, `*.events`/`*.listeners`).
@@ -197,7 +197,7 @@ Internal/private helpers do not require Javadoc but may have a short comment whe
 3. **bukkit/config/BukkitConfig** — implement the new `ModConfig` method
 4. **bukkit/…** — wire into the relevant listener/command
 5. **fabric/config/FabricConfig**, **forge/config/ForgeConfig**, **neoforge/config/NeoForgeConfig** — implement the new method
-6. **fabric/**, **forge/**, **neoforge/** — wire into the relevant mixin/event handler
+6. **fabric/**, **forge/**, **neoforge/** — wire into the relevant mixin/event handler or `commands/DvtCommand.java`
 7. Update `plugin.yml` (Bukkit), `fabric.mod.json` (Fabric), and Forge/NeoForge `@Mod` resources as needed
 
 ---
@@ -362,3 +362,6 @@ All shared string literals (mod ID, permission nodes, config defaults) live in `
 - **Unemployed villagers (profession `NONE`) are never blocked** — deliberate UX choice
 - **World-based disable list** — admins can whitelist specific worlds where trading is allowed
 - **Bypass permission** — operators/admins can trade freely via `Constants.PERMISSION_BYPASS`
+- **`CommandHandler` in `common/`** — all command response text built in one place; platforms apply their own formatting/color codes
+- **`/dvt toggle` is Bukkit-only** — relies on Bukkit permission nodes; mod platforms use op level checks via `Permissions.COMMANDS_GAMEMASTER` instead
+- **Permission API (MC 1.21.11+)** — vanilla dropped `CommandSourceStack.hasPermission(int)`; now use `source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)` for op level 2
