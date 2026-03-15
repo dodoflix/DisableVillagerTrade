@@ -1,9 +1,11 @@
-name: Integration Tests
+name: CI
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [master, develop, 'feature/**', 'fix/**']
   pull_request:
-    branches: [develop, master]
+    branches: [master, develop]
+  workflow_dispatch:
 
 env:
   JAVA_VERSION: '21'
@@ -22,7 +24,7 @@ jobs:
       - name: Check for code file changes
         id: changes
         run: |
-          COMMIT_MSG="${{ github.event.pull_request.title || github.event.head_commit.message }}"
+          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
 
           if [[ "$COMMIT_MSG" == *"[skip ci]"* ]] || [[ "$COMMIT_MSG" == *"[ci skip]"* ]]; then
             echo "⏭️ Skipping due to [skip ci]"
@@ -30,28 +32,36 @@ jobs:
             exit 0
           fi
 
-          if [[ "$COMMIT_MSG" == *"[force deploy]"* ]]; then
-            echo "✅ Force deploy requested"
+          if [[ "$COMMIT_MSG" == *"[force deploy]"* ]] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "✅ Force run"
             echo "should_test=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "✅ Manual trigger"
-            echo "should_test=true" >> $GITHUB_OUTPUT
-            exit 0
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
           fi
-
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
 
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
           SHOULD_TEST="false"
           while IFS= read -r file; do
-            if [[ "$file" == */src/main/* ]] || \
-               [[ "$file" == **/build.gradle.kts ]] || \
-               [[ "$file" == "gradle/libs.versions.toml" ]]; then
+            if [[ "$file" == */src/main/java/* ]] || \
+               [[ "$file" == */src/main/resources/* ]] || \
+               [[ "$file" == */src/test/* ]] || \
+               [[ "$file" == common/* ]] || \
+               [[ "$file" == bukkit/* ]] || \
+               [[ "$file" == fabric/* ]] || \
+               [[ "$file" == forge/* ]] || \
+               [[ "$file" == neoforge/* ]] || \
+               [[ "$file" == "build.gradle.kts" ]] || \
+               [[ "$file" == "settings.gradle.kts" ]] || \
+               [[ "$file" == "gradle.properties" ]] || \
+               [[ "$file" == "gradle/libs.versions.toml" ]] || \
+               [[ "$file" == */build.gradle.kts ]]; then
               SHOULD_TEST="true"
               echo "✅ Code file changed: $file"
               break
@@ -60,6 +70,33 @@ jobs:
 
           echo "should_test=$SHOULD_TEST" >> $GITHUB_OUTPUT
           echo "Should test: $SHOULD_TEST"
+
+  # ─── Unit tests ──────────────────────────────────────────────────────────
+
+  test-unit:
+    name: 🧪 Unit Tests
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew bukkit/gradlew
+      - name: Run common tests
+        run: ./gradlew :common:test --no-daemon
+      - name: Run bukkit tests
+        working-directory: bukkit
+        run: ./gradlew test --no-daemon
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: '**/build/reports/tests/'
 
   # ─── Per-platform parallel builds ────────────────────────────────────────
 
@@ -77,12 +114,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x bukkit/gradlew
       - working-directory: bukkit
-        run: ./gradlew shadowJar --no-daemon
+        run: ./gradlew build --no-daemon
       - uses: actions/upload-artifact@v7
         with:
-          name: bukkit-jar
+          name: DisableVillagerTrade-Bukkit
           path: bukkit/build/libs/*.jar
-          retention-days: 1
+          retention-days: 7
 
   build-fabric:
     name: 🧵 Build Fabric
@@ -101,9 +138,9 @@ jobs:
         run: ./gradlew build --no-daemon
       - uses: actions/upload-artifact@v7
         with:
-          name: fabric-jar
+          name: DisableVillagerTrade-Fabric
           path: fabric/build/libs/*.jar
-          retention-days: 1
+          retention-days: 7
 
   build-forge:
     name: 🔥 Build Forge
@@ -119,12 +156,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x forge/gradlew
       - working-directory: forge
-        run: ./gradlew shadowJar --no-daemon
+        run: ./gradlew build --no-daemon
       - uses: actions/upload-artifact@v7
         with:
-          name: forge-jar
+          name: DisableVillagerTrade-Forge
           path: forge/build/libs/*.jar
-          retention-days: 1
+          retention-days: 7
 
   build-neoforge:
     name: ⚒️ Build NeoForge
@@ -143,15 +180,18 @@ jobs:
         run: ./gradlew build --no-daemon
       - uses: actions/upload-artifact@v7
         with:
-          name: neoforge-jar
+          name: DisableVillagerTrade-NeoForge
           path: neoforge/build/libs/*.jar
-          retention-days: 1
+          retention-days: 7
 
-  # ─── Integration tests (each starts as soon as its build finishes) ────────
+  # ─── Integration tests (PR and manual dispatch only) ─────────────────────
+  # Each test starts as soon as its own platform build finishes.
+  # Artifacts are reused from the build jobs above — no double build.
 
   test-bukkit:
     name: 🪣 Test Bukkit/Paper
     needs: build-bukkit
+    if: needs.build-bukkit.result == 'success' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -162,7 +202,7 @@ jobs:
           distribution: 'temurin'
       - uses: actions/download-artifact@v8
         with:
-          name: bukkit-jar
+          name: DisableVillagerTrade-Bukkit
           path: bukkit-build
 
       - name: Download Paper server
@@ -180,7 +220,7 @@ jobs:
           echo "eula=true" > test-server/eula.txt
           echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
 
-      - name: Start Paper server and test plugin
+      - name: Start Paper server and verify plugin loads
         timeout-minutes: 5
         run: |
           cd test-server
@@ -206,6 +246,7 @@ jobs:
   test-fabric:
     name: 🧵 Test Fabric
     needs: build-fabric
+    if: needs.build-fabric.result == 'success' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -216,7 +257,7 @@ jobs:
           distribution: 'temurin'
       - uses: actions/download-artifact@v8
         with:
-          name: fabric-jar
+          name: DisableVillagerTrade-Fabric
           path: fabric-build
 
       - name: Download Fabric server
@@ -233,7 +274,7 @@ jobs:
           echo "eula=true" > test-server/eula.txt
           echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
 
-      - name: Start Fabric server and test mod
+      - name: Start Fabric server and verify mod loads
         timeout-minutes: 5
         run: |
           cd test-server
@@ -258,6 +299,7 @@ jobs:
   test-forge:
     name: 🔥 Test Forge
     needs: build-forge
+    if: needs.build-forge.result == 'success' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -268,7 +310,7 @@ jobs:
           distribution: 'temurin'
       - uses: actions/download-artifact@v8
         with:
-          name: forge-jar
+          name: DisableVillagerTrade-Forge
           path: forge-build
 
       - name: Cache Forge server installation
@@ -295,7 +337,7 @@ jobs:
           echo "eula=true" > test-server/eula.txt
           echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
 
-      - name: Start Forge server and test mod
+      - name: Start Forge server and verify mod loads
         timeout-minutes: 8
         run: |
           cd test-server
@@ -324,6 +366,7 @@ jobs:
   test-neoforge:
     name: ⚒️ Test NeoForge
     needs: build-neoforge
+    if: needs.build-neoforge.result == 'success' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -334,7 +377,7 @@ jobs:
           distribution: 'temurin'
       - uses: actions/download-artifact@v8
         with:
-          name: neoforge-jar
+          name: DisableVillagerTrade-NeoForge
           path: neoforge-build
 
       - name: Cache NeoForge server installation
@@ -361,7 +404,7 @@ jobs:
           echo "eula=true" > test-server/eula.txt
           echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
 
-      - name: Start NeoForge server and test mod
+      - name: Start NeoForge server and verify mod loads
         timeout-minutes: 8
         run: |
           cd test-server
@@ -387,35 +430,81 @@ jobs:
           name: neoforge-server-logs
           path: test-server/logs/
 
-  integration-summary:
-    name: 📊 Integration Test Summary
-    needs: [check-changes, test-bukkit, test-fabric, test-forge, test-neoforge]
+  # ─── Summary ─────────────────────────────────────────────────────────────
+
+  summary:
+    name: 📊 CI Summary
+    needs: [check-changes, test-unit, build-bukkit, build-fabric, build-forge, build-neoforge, test-bukkit, test-fabric, test-forge, test-neoforge]
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Check results
+      - name: Generate summary
         run: |
-          echo "## Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 🏗️ CI Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.check-changes.outputs.should_test }}" != "true" ]; then
-            echo "⏭️ Integration tests skipped — no relevant code changes." >> $GITHUB_STEP_SUMMARY
+            echo "⏭️ Skipped — no relevant code changes." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
-          [ "${{ needs.test-bukkit.result }}" == "success" ] && echo "✅ **Bukkit/Paper**: Passed" >> $GITHUB_STEP_SUMMARY || echo "❌ **Bukkit/Paper**: Failed" >> $GITHUB_STEP_SUMMARY
-          [ "${{ needs.test-fabric.result }}" == "success" ] && echo "✅ **Fabric**: Passed" >> $GITHUB_STEP_SUMMARY || echo "❌ **Fabric**: Failed" >> $GITHUB_STEP_SUMMARY
-          [ "${{ needs.test-forge.result }}" == "success" ] && echo "✅ **Forge**: Passed" >> $GITHUB_STEP_SUMMARY || echo "❌ **Forge**: Failed" >> $GITHUB_STEP_SUMMARY
-          [ "${{ needs.test-neoforge.result }}" == "success" ] && echo "✅ **NeoForge**: Passed" >> $GITHUB_STEP_SUMMARY || echo "❌ **NeoForge**: Failed" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.test-bukkit.result }}" != "success" ] || \
-             [ "${{ needs.test-fabric.result }}" != "success" ] || \
-             [ "${{ needs.test-forge.result }}" != "success" ] || \
-             [ "${{ needs.test-neoforge.result }}" != "success" ]; then
-            echo ""
-            echo "❌ Some integration tests failed!"
-            exit 1
+          for pair in \
+            "Unit Tests:test-unit" \
+            "Bukkit Build:build-bukkit" \
+            "Fabric Build:build-fabric" \
+            "Forge Build:build-forge" \
+            "NeoForge Build:build-neoforge"; do
+            label="${pair%%:*}"
+            key="${pair#*:}"
+            result=$(eval echo "\${{ needs.${key}.result }}")
+            case "$result" in
+              success)  echo "| $label | ✅ Passed |" >> $GITHUB_STEP_SUMMARY ;;
+              skipped)  echo "| $label | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY ;;
+              *)        echo "| $label | ❌ Failed |" >> $GITHUB_STEP_SUMMARY ;;
+            esac
+          done
+
+          # Integration tests (only on PR/dispatch)
+          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Integration Tests" >> $GITHUB_STEP_SUMMARY
+            echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+            for pair in \
+              "Bukkit/Paper:test-bukkit" \
+              "Fabric:test-fabric" \
+              "Forge:test-forge" \
+              "NeoForge:test-neoforge"; do
+              label="${pair%%:*}"
+              key="${pair#*:}"
+              result=$(eval echo "\${{ needs.${key}.result }}")
+              case "$result" in
+                success)  echo "| $label | ✅ Passed |" >> $GITHUB_STEP_SUMMARY ;;
+                skipped)  echo "| $label | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY ;;
+                *)        echo "| $label | ❌ Failed |" >> $GITHUB_STEP_SUMMARY ;;
+              esac
+            done
           fi
 
-          echo ""
-          echo "🎉 All integration tests passed!"
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> 📦 Build artifacts available in the Actions artifacts section." >> $GITHUB_STEP_SUMMARY
+
+          FAILED=false
+          for result in \
+            "${{ needs.test-unit.result }}" \
+            "${{ needs.build-bukkit.result }}" \
+            "${{ needs.build-fabric.result }}" \
+            "${{ needs.build-forge.result }}" \
+            "${{ needs.build-neoforge.result }}" \
+            "${{ needs.test-bukkit.result }}" \
+            "${{ needs.test-fabric.result }}" \
+            "${{ needs.test-forge.result }}" \
+            "${{ needs.test-neoforge.result }}"; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              FAILED=true
+            fi
+          done
+          [ "$FAILED" = "true" ] && exit 1 || true
