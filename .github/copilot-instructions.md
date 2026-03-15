@@ -332,10 +332,16 @@ Do **not** add `Co-authored-by:` or any automated-author trailers to commit mess
 
 Workflows are **thin callers** delegating to [`mc-multiplatform-toolkit`](https://github.com/dodoflix/mc-multiplatform-toolkit):
 
-- **ci.yml** — calls `mc-multiplatform-toolkit/.github/workflows/ci.yml@main`; runs unit tests, parallel platform builds, and integration tests
-- **cd.yml** — calls `mc-multiplatform-toolkit/.github/workflows/cd.yml@main`; automated versioning and Modrinth publishing; version bump is derived from commit types (see Conventional Commits above)
+- **ci.yml** — calls `mc-multiplatform-toolkit/.github/workflows/ci.yml@main`; runs unit tests, parallel platform builds, and integration tests; uploads JaCoCo XML reports to Codecov (`upload-coverage: true`, requires `CODECOV_TOKEN` repository secret)
+- **cd.yml** — triggered by `workflow_run` on CI completing successfully (not by direct push); calls `mc-multiplatform-toolkit/.github/workflows/cd.yml@main`; automated versioning and Modrinth publishing; version bump is derived from commit types
+
+**CI gates CD**: releases only happen when CI passes. The `cd.yml` trigger is `workflow_run` on the `CI` workflow completing with `conclusion == 'success'`.
 
 **Never edit CI logic directly in this repo.** Changes to build/test/release logic go in the toolkit repo (`~/Projects/mc-multiplatform-toolkit`). This project's workflow files are ≤ 25 lines each.
+
+### Codecov
+
+JaCoCo is configured for `common` and `bukkit` modules (XML output). Coverage reports are uploaded after unit tests. Requires `CODECOV_TOKEN` repository secret (set via repo Settings → Secrets). `fail_ci_if_error: false` — CI does not fail if the token is missing.
 
 ---
 
