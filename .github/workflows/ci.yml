@@ -439,72 +439,54 @@ jobs:
     if: always()
     steps:
       - name: Generate summary
+        env:
+          RESULT_UNIT:     ${{ needs.test-unit.result }}
+          RESULT_BUKKIT:   ${{ needs.build-bukkit.result }}
+          RESULT_FABRIC:   ${{ needs.build-fabric.result }}
+          RESULT_FORGE:    ${{ needs.build-forge.result }}
+          RESULT_NEOFORGE: ${{ needs.build-neoforge.result }}
+          RESULT_T_BUKKIT:   ${{ needs.test-bukkit.result }}
+          RESULT_T_FABRIC:   ${{ needs.test-fabric.result }}
+          RESULT_T_FORGE:    ${{ needs.test-forge.result }}
+          RESULT_T_NEOFORGE: ${{ needs.test-neoforge.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          SHOULD_TEST: ${{ needs.check-changes.outputs.should_test }}
         run: |
+          status() { case "$1" in success) echo "✅ Passed" ;; skipped) echo "⏭️ Skipped" ;; *) echo "❌ Failed ($1)" ;; esac; }
+
           echo "## 🏗️ CI Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.check-changes.outputs.should_test }}" != "true" ]; then
+          if [ "$SHOULD_TEST" != "true" ]; then
             echo "⏭️ Skipped — no relevant code changes." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests       | $(status "$RESULT_UNIT") |"     >> $GITHUB_STEP_SUMMARY
+          echo "| Bukkit Build     | $(status "$RESULT_BUKKIT") |"   >> $GITHUB_STEP_SUMMARY
+          echo "| Fabric Build     | $(status "$RESULT_FABRIC") |"   >> $GITHUB_STEP_SUMMARY
+          echo "| Forge Build      | $(status "$RESULT_FORGE") |"    >> $GITHUB_STEP_SUMMARY
+          echo "| NeoForge Build   | $(status "$RESULT_NEOFORGE") |" >> $GITHUB_STEP_SUMMARY
 
-          for pair in \
-            "Unit Tests:test-unit" \
-            "Bukkit Build:build-bukkit" \
-            "Fabric Build:build-fabric" \
-            "Forge Build:build-forge" \
-            "NeoForge Build:build-neoforge"; do
-            label="${pair%%:*}"
-            key="${pair#*:}"
-            result=$(eval echo "\${{ needs.${key}.result }}")
-            case "$result" in
-              success)  echo "| $label | ✅ Passed |" >> $GITHUB_STEP_SUMMARY ;;
-              skipped)  echo "| $label | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY ;;
-              *)        echo "| $label | ❌ Failed |" >> $GITHUB_STEP_SUMMARY ;;
-            esac
-          done
-
-          # Integration tests (only on PR/dispatch)
-          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Integration Tests" >> $GITHUB_STEP_SUMMARY
             echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
             echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-            for pair in \
-              "Bukkit/Paper:test-bukkit" \
-              "Fabric:test-fabric" \
-              "Forge:test-forge" \
-              "NeoForge:test-neoforge"; do
-              label="${pair%%:*}"
-              key="${pair#*:}"
-              result=$(eval echo "\${{ needs.${key}.result }}")
-              case "$result" in
-                success)  echo "| $label | ✅ Passed |" >> $GITHUB_STEP_SUMMARY ;;
-                skipped)  echo "| $label | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY ;;
-                *)        echo "| $label | ❌ Failed |" >> $GITHUB_STEP_SUMMARY ;;
-              esac
-            done
+            echo "| Bukkit/Paper | $(status "$RESULT_T_BUKKIT") |"   >> $GITHUB_STEP_SUMMARY
+            echo "| Fabric       | $(status "$RESULT_T_FABRIC") |"   >> $GITHUB_STEP_SUMMARY
+            echo "| Forge        | $(status "$RESULT_T_FORGE") |"    >> $GITHUB_STEP_SUMMARY
+            echo "| NeoForge     | $(status "$RESULT_T_NEOFORGE") |" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> 📦 Build artifacts available in the Actions artifacts section." >> $GITHUB_STEP_SUMMARY
 
-          FAILED=false
-          for result in \
-            "${{ needs.test-unit.result }}" \
-            "${{ needs.build-bukkit.result }}" \
-            "${{ needs.build-fabric.result }}" \
-            "${{ needs.build-forge.result }}" \
-            "${{ needs.build-neoforge.result }}" \
-            "${{ needs.test-bukkit.result }}" \
-            "${{ needs.test-fabric.result }}" \
-            "${{ needs.test-forge.result }}" \
-            "${{ needs.test-neoforge.result }}"; do
+          for result in "$RESULT_UNIT" "$RESULT_BUKKIT" "$RESULT_FABRIC" "$RESULT_FORGE" "$RESULT_NEOFORGE" \
+                        "$RESULT_T_BUKKIT" "$RESULT_T_FABRIC" "$RESULT_T_FORGE" "$RESULT_T_NEOFORGE"; do
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
-              FAILED=true
+              exit 1
             fi
           done
-          [ "$FAILED" = "true" ] && exit 1 || true
