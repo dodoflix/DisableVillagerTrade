@@ -4,6 +4,75 @@
 
 ---
 
+## Development Workflow
+
+### Task Size Gating — Plan Before Acting
+
+Assess scope before touching a single file:
+
+**Always plan first when ANY of these are true:**
+- New feature, new class, or new module is being added
+- Task touches more than 3 files
+- The request is ambiguous or has multiple valid approaches
+- A design decision affects `ModConfig` interface (breaking change for all platforms)
+
+**Planning steps:**
+1. Use `explore` agent to understand the current codebase
+2. Write a plan to the session plan file; break into ordered todos in the SQL `todos` table
+3. Confirm the plan with the user before writing any code
+
+**Start directly (no plan needed):**
+- Single-file bug fix, typo, or comment update
+- Dependency bump in `libs.versions.toml`
+- Documentation-only change
+
+---
+
+### Sub-Agent Dispatch — One Agent Per Lifecycle Phase
+
+Delegate each phase to the right specialised agent. Never do in main context what a sub-agent can do.
+
+| Phase | Agent type | Example prompt |
+|---|---|---|
+| **Explore** | `explore` | "Where is trade blocking logic? Find all callers of `shouldBlockTrade`." |
+| **TDD — write tests** | `general-purpose` | "Write failing JUnit 5 tests for the new `shouldBlock_whenX` scenario in `common/`." |
+| **Implement** | `general-purpose` | "Implement `shouldBlock_whenX` in `TradeBlocker.java` to make the tests pass." |
+| **Build & test** | `task` | Run `./gradlew test` or `:common:test` — returns full output only on failure. |
+| **Code review** | `code-review` | Review all staged changes before committing. |
+
+**Parallelise independent work:** Launch multiple `explore` agents in one response for independent questions. Run `task` agents in background while continuing planning.
+
+**Never** re-read files an `explore` agent already reported — use its returned content.
+
+---
+
+### TDD — Test-Driven Development
+
+All logic in `common/` **must** follow TDD. Platform wiring (listeners, mixins) uses mocks.
+
+**The cycle:**
+
+1. **Write the failing test** (in `common/src/test/java/…`)
+   ```java
+   @Test
+   void should<Outcome>_when<Condition>() {
+       // Arrange
+       // Act
+       // Assert
+   }
+   ```
+2. **Run**: `task` agent → `./gradlew :common:test` — confirm the test **fails** (not compiles-error)
+3. **Implement** the minimum logic to make it pass — no extra code
+4. **Run again**: `task` agent → `./gradlew :common:test` — confirm **green**
+5. **Refactor** if needed, re-run tests
+6. **Code review**: `code-review` agent — both test and implementation staged together
+7. **Commit** test + implementation in a single commit
+
+Use parameterized tests (`@ParameterizedTest`) for logic with multiple input combinations.
+Never skip step 2 — a test that never fails proves nothing.
+
+---
+
 ## File Sync Rules
 
 When any of the files below are updated, you **must** also update all listed dependents in the same commit:
