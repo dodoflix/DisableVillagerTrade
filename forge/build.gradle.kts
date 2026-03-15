@@ -4,8 +4,10 @@ plugins {
 }
 
 // Extract versions from catalog for use in plugin DSLs
-val minecraftVersion = libs.versions.minecraft.get()
 val forgeVersion = libs.versions.forge.get()
+// Derive Minecraft version from Forge version (e.g., "1.21.11" from "1.21.11-61.0.3")
+require('-' in forgeVersion) { "Unexpected Forge version format (expected '<mcVersion>-<forgeVersion>'): $forgeVersion" }
+val minecraftVersion = forgeVersion.substringBefore('-')
 
 base {
     archivesName.set("DisableVillagerTrade-Forge")
