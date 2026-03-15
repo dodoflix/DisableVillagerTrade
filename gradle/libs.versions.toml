@@ -3,8 +3,8 @@
 minecraft = "1.21.10"
 
 # Fabric
-fabric-loader = "0.18.1"
 fabric-api = "0.140.2+"
+fabric-loader = "0.18.3"
 
 # Forge
 forge = "1.21.10-60.1.5"
@@ -16,8 +16,10 @@ neoforge = "21.10.64"
 spigot-api = "1.21.4-R0.1-SNAPSHOT"
 
 # Plugins
-fabric-loom = "1.13-SNAPSHOT"
+fabric-loom = "1.15.0-alpha.6"
 neoforge-moddev = "2.0.126"
+fabric-loom = "1.13-SNAPSHOT"
+neoforge-moddev = "2.0.134"
 shadow = "9.3.0"
 
 # Testing
