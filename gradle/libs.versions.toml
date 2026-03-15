@@ -1,9 +1,9 @@
 [versions]
 # Minecraft
-minecraft = "1.21.10"
+minecraft = "1.21.11"
 
 # Fabric
-fabric-api = "0.140.2+"
+fabric-api = "0.140.2+26.1"
 fabric-loader = "0.18.3"
 
 # Forge
@@ -17,14 +17,12 @@ spigot-api = "1.21.4-R0.1-SNAPSHOT"
 
 # Plugins
 fabric-loom = "1.15.0-alpha.6"
-neoforge-moddev = "2.0.126"
-fabric-loom = "1.13-SNAPSHOT"
 neoforge-moddev = "2.0.134"
 shadow = "9.3.0"
 
 # Testing
 junit = "6.0.1"
-mockito = "5.21.0"
+mockito = "5.23.0"
 
 [libraries]
 # Minecraft

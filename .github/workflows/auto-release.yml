@@ -12,11 +12,11 @@ permissions:
 env:
   JAVA_VERSION: '21'
   FORGE_MC_VERSIONS: |
-    1.21.10
+    1.21.11
   FABRIC_MC_VERSIONS: |
-    1.21.10
+    1.21.11
   NEOFORGE_MC_VERSIONS: |
-    1.21.10
+    1.21.11
   BUKKIT_MC_VERSIONS: |
     1.14
     1.14.1
@@ -60,6 +60,7 @@ env:
     1.21.8
     1.21.9
     1.21.10
+    1.21.11
 
 jobs:
   check-changes:
