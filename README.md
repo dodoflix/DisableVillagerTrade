@@ -1,6 +1,6 @@
 # Disable Villager Trade
 
-[![Build](https://github.com/dodoflix/DisableVillagerTrade/actions/workflows/test.yml/badge.svg)](https://github.com/dodoflix/DisableVillagerTrade/actions/workflows/test.yml)
+[![Build](https://github.com/dodoflix/DisableVillagerTrade/actions/workflows/ci.yml/badge.svg)](https://github.com/dodoflix/DisableVillagerTrade/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/dodoflix/DisableVillagerTrade/graph/badge.svg)](https://codecov.io/gh/dodoflix/DisableVillagerTrade)
 [![GitHub Release](https://img.shields.io/github/v/release/dodoflix/DisableVillagerTrade?label=release)](https://github.com/dodoflix/DisableVillagerTrade/releases)
 [![Modrinth Downloads](https://img.shields.io/modrinth/dt/disable-villager-trade?logo=modrinth&label=modrinth)](https://modrinth.com/plugin/disable-villager-trade)
@@ -28,7 +28,7 @@ Disable villager trade on your Minecraft server! Now supports **multiple platfor
 - 🌍 Per-world/dimension exclusion configuration
 - 👨‍🌾 Villagers with no profession (unemployed) can still be interacted with
 - 🔔 Automatic update checker with notifications
-- ⚙️ Admin commands for management (Bukkit only)
+- ⚙️ Admin commands for management (all platforms)
 
 ## 📦 Installation
 
@@ -106,7 +106,11 @@ check_interval = 24
 notify_on_join = true
 ```
 
-## 🔧 Commands (Bukkit Only)
+## 🔧 Commands
+
+All platforms support the `/dvt` command. Bukkit additionally registers `/disabletrade` and `/tradetoggle` as aliases.
+
+### Bukkit
 
 | Command | Description | Permission |
 |---------|-------------|------------|
@@ -116,6 +120,14 @@ notify_on_join = true
 | `/disabletrade help` | Show help message | `disabletrade.admin` |
 
 **Aliases:** `/dvt`, `/tradetoggle`
+
+### Fabric / Forge / NeoForge
+
+| Command | Description | Required Permission |
+|---------|-------------|---------------------|
+| `/dvt reload` | Reload the mod configuration | OP level 2 (`COMMANDS_GAMEMASTER`) |
+| `/dvt status` | Show mod status and settings | OP level 2 (`COMMANDS_GAMEMASTER`) |
+| `/dvt help` | Show help message | OP level 2 (`COMMANDS_GAMEMASTER`) |
 
 ## 🔐 Permissions
 

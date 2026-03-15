@@ -3,11 +3,13 @@ package me.dodo.disablevillagertrade.forge;
 import me.dodo.disablevillagertrade.common.Constants;
 import me.dodo.disablevillagertrade.common.TradeBlocker;
 import me.dodo.disablevillagertrade.common.UpdateChecker;
+import me.dodo.disablevillagertrade.forge.commands.DvtCommand;
 import me.dodo.disablevillagertrade.forge.config.ForgeConfig;
 import me.dodo.disablevillagertrade.forge.events.VillagerTradeHandler;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
@@ -63,6 +65,7 @@ public class DisableVillagerTradeForge {
         ServerStoppingEvent.BUS.addListener(this::onServerStopping);
         PlayerEvent.PlayerLoggedInEvent.BUS.addListener(this::onPlayerJoin);
         PlayerInteractEvent.EntityInteract.BUS.addListener(tradeHandler::onPlayerInteractEntity);
+        RegisterCommandsEvent.BUS.addListener(this::onRegisterCommands);
     }
     
     public void onServerStarted(ServerStartedEvent event) {
@@ -96,8 +99,7 @@ public class DisableVillagerTradeForge {
         }
     }
     
-    public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
+    public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {        if (event.getEntity() instanceof ServerPlayer player) {
             if (config.isNotifyOnJoin() && updateChecker != null && updateChecker.isUpdateAvailable()) {
                 // Check if player has update permission (op level 2+)
                 if (player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
@@ -110,7 +112,16 @@ public class DisableVillagerTradeForge {
             }
         }
     }
-    
+
+    /**
+     * Registers the {@code /dvt} command when the server builds its command tree.
+     *
+     * @param event the Forge command registration event
+     */
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        DvtCommand.register(event.getDispatcher());
+    }
+
     public static DisableVillagerTradeForge getInstance() {
         return instance;
     }

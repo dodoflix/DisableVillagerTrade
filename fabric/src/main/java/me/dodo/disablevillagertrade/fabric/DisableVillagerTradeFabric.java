@@ -4,7 +4,9 @@ import me.dodo.disablevillagertrade.common.Constants;
 import me.dodo.disablevillagertrade.common.TradeBlocker;
 import me.dodo.disablevillagertrade.common.UpdateChecker;
 import me.dodo.disablevillagertrade.fabric.config.FabricConfig;
+import me.dodo.disablevillagertrade.fabric.commands.DvtCommand;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.network.chat.Component;
@@ -43,6 +45,10 @@ public class DisableVillagerTradeFabric implements ModInitializer {
         // Initialize trade blocker
         tradeBlocker = new TradeBlocker();
         
+        // Register commands
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+            DvtCommand.register(dispatcher));
+
         // Server lifecycle events
         ServerLifecycleEvents.SERVER_STARTED.register(this::onServerStarted);
         ServerLifecycleEvents.SERVER_STOPPING.register(this::onServerStopping);

@@ -3,6 +3,7 @@ package me.dodo.disablevillagertrade.neoforge;
 import me.dodo.disablevillagertrade.common.Constants;
 import me.dodo.disablevillagertrade.common.TradeBlocker;
 import me.dodo.disablevillagertrade.common.UpdateChecker;
+import me.dodo.disablevillagertrade.neoforge.commands.DvtCommand;
 import me.dodo.disablevillagertrade.neoforge.config.NeoForgeConfig;
 import me.dodo.disablevillagertrade.neoforge.events.VillagerTradeHandler;
 import net.minecraft.server.permissions.Permissions;
@@ -15,6 +16,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
@@ -106,7 +108,17 @@ public class DisableVillagerTradeNeoForge {
             }
         }
     }
-    
+
+    /**
+     * Registers the {@code /dvt} command when the server builds its command tree.
+     *
+     * @param event the NeoForge command registration event
+     */
+    @SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        DvtCommand.register(event.getDispatcher());
+    }
+
     public static DisableVillagerTradeNeoForge getInstance() {
         return instance;
     }

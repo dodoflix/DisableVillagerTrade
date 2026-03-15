@@ -24,7 +24,7 @@ DisableVillagerTrade is a lightweight mod/plugin crafted to block trading intera
 - **Bypass Permission** - Allow staff to trade with `disabletrade.bypass` permission.
 - **Smart Profession Detection** - Villagers with no profession (NONE) can still be interacted with.
 - **Automatic Update Checker** - Get notified when a new version is available.
-- **Admin Commands** - Manage the plugin with simple commands (Bukkit).
+- **Admin Commands** - Manage the mod with simple commands on all platforms (`/dvt reload|status|help`).
 
 ## 📦 Installation
 
@@ -58,7 +58,11 @@ disabled-worlds:
   - example-world
 ```
 
-## 🎮 Commands (Bukkit Only)
+## 🎮 Commands
+
+All platforms support the `/dvt` command. Bukkit additionally registers `/disabletrade` and `/tradetoggle` as aliases.
+
+### Bukkit
 
 | Command | Description | Permission |
 |---------|-------------|------------|
@@ -68,6 +72,14 @@ disabled-worlds:
 | `/disabletrade help` | Show help message | `disabletrade.admin` |
 
 **Aliases:** `/dvt`, `/tradetoggle`
+
+### Fabric / Forge / NeoForge
+
+| Command | Description | Required Permission |
+|---------|-------------|---------------------|
+| `/dvt reload` | Reload the mod configuration | OP level 2 |
+| `/dvt status` | Show mod status and settings | OP level 2 |
+| `/dvt help` | Show help message | OP level 2 |
 
 ## 🔑 Permissions
 

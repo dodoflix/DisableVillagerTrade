@@ -4,6 +4,100 @@
 
 ---
 
+## Development Workflow
+
+### Task Size Gating — Plan Before Acting
+
+Assess scope before touching a single file:
+
+**Always plan first when ANY of these are true:**
+- New feature, new class, or new module is being added
+- Task touches more than 3 files
+- The request is ambiguous or has multiple valid approaches
+- A design decision affects `ModConfig` interface (breaking change for all platforms)
+
+**Planning steps:**
+1. Use `explore` agent to understand the current codebase
+2. Write a plan to the session plan file; break into ordered todos in the SQL `todos` table
+3. Confirm the plan with the user before writing any code
+
+**Start directly (no plan needed):**
+- Single-file bug fix, typo, or comment update
+- Dependency bump in `libs.versions.toml`
+- Documentation-only change
+
+---
+
+### Sub-Agent Dispatch — One Agent Per Lifecycle Phase
+
+Delegate each phase to the right specialised agent. Never do in main context what a sub-agent can do.
+
+| Phase | Agent type | Example prompt |
+|---|---|---|
+| **Explore** | `explore` | "Where is trade blocking logic? Find all callers of `shouldBlockTrade`." |
+| **TDD — write tests** | `general-purpose` | "Write failing JUnit 5 tests for the new `shouldBlock_whenX` scenario in `common/`." |
+| **Implement** | `general-purpose` | "Implement `shouldBlock_whenX` in `TradeBlocker.java` to make the tests pass." |
+| **Build & test** | `task` | Run `./gradlew test` or `:common:test` — returns full output only on failure. |
+| **Code review** | `code-review` | Review all staged changes before committing. |
+
+**Parallelise independent work:** Launch multiple `explore` agents in one response for independent questions. Run `task` agents in background while continuing planning.
+
+**Never** re-read files an `explore` agent already reported — use its returned content.
+
+---
+
+### Reference Consistency Check
+
+**After every change — before committing — scan for stale references.**
+
+Any time you rename, move, or change the behaviour of something, other files may refer to the old name or old behaviour. Use `grep` to find them:
+
+```bash
+# Find all references to a renamed file, class, method, or concept
+grep -r "old-name" . --include="*.md" --include="*.java" --include="*.yml" --include="*.toml"
+```
+
+Things to check after common change types:
+
+- **File renamed** → grep the old filename across all `.md`, `.yml`, `.java`, `.toml` files
+- **Class/method renamed** → grep the old name across source + docs
+- **Config key changed** → grep the old key in docs, plugin.yml, README, copilot instructions
+- **Workflow renamed** → grep the old workflow name in README, CONTRIBUTING, copilot instructions, badge URLs
+- **New feature added** → check if README, CHANGELOG, or copilot instructions need updating
+
+**Fix every stale reference in the same commit as the original change.** A commit that renames something but leaves dangling references is incomplete.
+
+---
+
+### TDD — Test-Driven Development
+
+All logic in `common/` **must** follow TDD. Platform wiring (listeners, mixins) uses mocks.
+
+**The cycle:**
+
+1. **Write the failing test** (in `common/src/test/java/…`)
+   ```java
+   @Test
+   void should<Outcome>_when<Condition>() {
+       // Arrange
+       // Act
+       // Assert
+   }
+   ```
+2. **Run**: `task` agent → `./gradlew :common:test` — confirm the test **fails** (not compiles-error)
+3. **Implement** the minimum logic to make it pass — no extra code
+4. **Run again**: `task` agent → `./gradlew :common:test` — confirm **green**
+5. **Refactor** if needed, re-run tests
+6. **Code review**: `code-review` agent — both test and implementation staged together
+7. **Commit** test + implementation in a single commit
+
+Use parameterized tests (`@ParameterizedTest`) for logic with multiple input combinations.
+Never skip step 2 — a test that never fails proves nothing.
+
+---
+
+
+
 ## Project Overview
 
 A lightweight, multi-platform Minecraft mod/plugin that prevents players from trading with villagers. Supports **Bukkit/Spigot/Paper**, **Fabric**, **Forge**, and **NeoForge** from a single shared core.
@@ -40,9 +134,9 @@ All business logic lives in `common/`. Platform modules only wire platform APIs 
 me.dodo.disablevillagertrade
 ├── common.*          ← shared interfaces, logic, utilities
 ├── bukkit.*          ← Bukkit-specific (listeners/, commands/, config/, update/)
-├── fabric.*          ← Fabric-specific (mixin/, config/)
-├── forge.*           ← Forge-specific (events/, config/)
-└── neoforge.*        ← NeoForge-specific (events/, config/)
+├── fabric.*          ← Fabric-specific (mixin/, config/, commands/)
+├── forge.*           ← Forge-specific (events/, config/, commands/)
+└── neoforge.*        ← NeoForge-specific (events/, config/, commands/)
 ```
 
 Sub-package names mirror each other across platforms (e.g. `*.config`, `*.events`/`*.listeners`).
@@ -103,7 +197,7 @@ Internal/private helpers do not require Javadoc but may have a short comment whe
 3. **bukkit/config/BukkitConfig** — implement the new `ModConfig` method
 4. **bukkit/…** — wire into the relevant listener/command
 5. **fabric/config/FabricConfig**, **forge/config/ForgeConfig**, **neoforge/config/NeoForgeConfig** — implement the new method
-6. **fabric/**, **forge/**, **neoforge/** — wire into the relevant mixin/event handler
+6. **fabric/**, **forge/**, **neoforge/** — wire into the relevant mixin/event handler or `commands/DvtCommand.java`
 7. Update `plugin.yml` (Bukkit), `fabric.mod.json` (Fabric), and Forge/NeoForge `@Mod` resources as needed
 
 ---
@@ -158,7 +252,7 @@ Format: `should<Outcome>_when<Condition>`
 
 ## Conventional Commits
 
-Every commit message **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. The `auto-release.yml` workflow parses commit messages to determine the next version, so correct types are critical.
+Every commit message **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. The `cd.yml` caller (via `mc-multiplatform-toolkit`) parses commit messages to determine the next version, so correct types are critical.
 
 ### Format
 
@@ -236,9 +330,12 @@ Do **not** add `Co-authored-by:` or any automated-author trailers to commit mess
 
 ## CI/CD
 
-- **test.yml** — runs on push/PR; builds all platforms + unit tests + JaCoCo coverage
-- **integration-test.yml** — spins up real Paper/Fabric/Forge/NeoForge servers and validates the mod loads without errors
-- **auto-release.yml** — automated versioning and Modrinth publishing; version bump is derived from commit types (see Conventional Commits above)
+Workflows are **thin callers** delegating to [`mc-multiplatform-toolkit`](https://github.com/dodoflix/mc-multiplatform-toolkit):
+
+- **ci.yml** — calls `mc-multiplatform-toolkit/.github/workflows/ci.yml@main`; runs unit tests, parallel platform builds, and integration tests
+- **cd.yml** — calls `mc-multiplatform-toolkit/.github/workflows/cd.yml@main`; automated versioning and Modrinth publishing; version bump is derived from commit types (see Conventional Commits above)
+
+**Never edit CI logic directly in this repo.** Changes to build/test/release logic go in the toolkit repo (`~/Projects/mc-multiplatform-toolkit`). This project's workflow files are ≤ 25 lines each.
 
 ---
 
@@ -265,3 +362,6 @@ All shared string literals (mod ID, permission nodes, config defaults) live in `
 - **Unemployed villagers (profession `NONE`) are never blocked** — deliberate UX choice
 - **World-based disable list** — admins can whitelist specific worlds where trading is allowed
 - **Bypass permission** — operators/admins can trade freely via `Constants.PERMISSION_BYPASS`
+- **`CommandHandler` in `common/`** — all command response text built in one place; platforms apply their own formatting/color codes
+- **`/dvt toggle` is Bukkit-only** — relies on Bukkit permission nodes; mod platforms use op level checks via `Permissions.COMMANDS_GAMEMASTER` instead
+- **Permission API (MC 1.21.11+)** — vanilla dropped `CommandSourceStack.hasPermission(int)`; now use `source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)` for op level 2
