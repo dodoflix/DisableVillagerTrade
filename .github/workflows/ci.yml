@@ -18,4 +18,5 @@ jobs:
       run-fabric: true
       run-forge: true
       run-neoforge: true
+      upload-coverage: true
     secrets: inherit
