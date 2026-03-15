@@ -90,28 +90,28 @@ jobs:
           ./gradlew build --no-daemon
       
       - name: Upload Bukkit artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: bukkit-jar
           path: bukkit/build/libs/*.jar
           retention-days: 1
       
       - name: Upload Fabric artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: fabric-jar
           path: fabric/build/libs/*.jar
           retention-days: 1
       
       - name: Upload Forge artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: forge-jar
           path: forge/build/libs/*.jar
           retention-days: 1
       
       - name: Upload NeoForge artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: neoforge-jar
           path: neoforge/build/libs/*.jar
@@ -197,7 +197,7 @@ jobs:
       
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: paper-server-logs
           path: test-server/logs/
@@ -271,7 +271,7 @@ jobs:
       
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: fabric-server-logs
           path: test-server/logs/
@@ -351,7 +351,7 @@ jobs:
       
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: forge-server-logs
           path: test-server/logs/
@@ -426,7 +426,7 @@ jobs:
       
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: neoforge-server-logs
           path: test-server/logs/
