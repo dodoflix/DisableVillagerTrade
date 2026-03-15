@@ -818,3 +818,13 @@ jobs:
             neoforge
           game-versions: ${{ env.NEOFORGE_MC_VERSIONS }}
         continue-on-error: true
+
+      - name: Update Modrinth project description
+        if: needs.check-changes.outputs.is_production == 'true'
+        run: |
+          curl -s -X PATCH \
+            "https://api.modrinth.com/v2/project/${{ vars.MODRINTH_PROJECT_ID }}" \
+            -H "Authorization: ${{ secrets.MODRINTH_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"body\": $(jq -Rs . < .modrinth/description.md)}"
+        continue-on-error: true
