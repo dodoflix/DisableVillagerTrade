@@ -4,13 +4,12 @@ import me.dodo.disablevillagertrade.common.Constants;
 import me.dodo.disablevillagertrade.fabric.DisableVillagerTradeFabric;
 import me.dodo.disablevillagertrade.fabric.config.FabricConfig;
 import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -36,11 +35,11 @@ public abstract class VillagerMixin {
         // Get profession name from VillagerData - profession() returns Holder<VillagerProfession>
         Holder<VillagerProfession> professionHolder = villager.getVillagerData().profession();
         String professionName = professionHolder.unwrapKey()
-            .map(key -> key.location().getPath().toUpperCase())
+            .map(key -> key.identifier().getPath().toUpperCase())
             .orElse("NONE");
         
         // Get dimension name
-        String dimensionName = player.level().dimension().location().toString();
+        String dimensionName = player.level().dimension().identifier().toString();
         
         // Check bypass permission (only for server players)
         boolean hasBypass = false;

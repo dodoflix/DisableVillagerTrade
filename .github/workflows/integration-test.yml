@@ -86,8 +86,12 @@ jobs:
       
       - name: Build all platforms
         run: |
-          chmod +x gradlew
+          chmod +x gradlew bukkit/gradlew fabric/gradlew forge/gradlew neoforge/gradlew
           ./gradlew build --no-daemon
+          (cd bukkit && ./gradlew shadowJar --no-daemon)
+          (cd fabric && ./gradlew build --no-daemon)
+          (cd forge && ./gradlew shadowJar --no-daemon)
+          (cd neoforge && ./gradlew build --no-daemon)
       
       - name: Upload Bukkit artifact
         uses: actions/upload-artifact@v7
