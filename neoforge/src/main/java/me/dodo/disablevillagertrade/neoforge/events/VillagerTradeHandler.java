@@ -6,8 +6,9 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
@@ -36,14 +37,14 @@ public class VillagerTradeHandler {
         // Get profession name - profession() returns Holder<VillagerProfession>
         Holder<VillagerProfession> professionHolder = villager.getVillagerData().profession();
         String professionName = professionHolder.unwrapKey()
-            .map(key -> key.location().getPath().toUpperCase())
+            .map(key -> key.identifier().getPath().toUpperCase())
             .orElse("NONE");
         
         // Get dimension name
-        String dimensionName = player.level().dimension().location().toString();
+        String dimensionName = player.level().dimension().identifier().toString();
         
         // Check bypass permission (op level 2+)
-        boolean hasBypass = player.hasPermissions(2);
+        boolean hasBypass = player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
         
         // Check if trade should be blocked
         boolean shouldBlock = DisableVillagerTradeNeoForge.getTradeBlocker().shouldBlockTrade(

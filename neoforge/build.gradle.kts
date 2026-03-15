@@ -2,9 +2,14 @@ plugins {
     alias(libs.plugins.neoforge.moddev)
 }
 
+val modVersion: String by project
+val mavenGroup: String by project
+group = mavenGroup
+version = modVersion
+
 // Extract versions from catalog using explicit API (required for NeoForge plugin compatibility)
 val catalog = versionCatalogs.named("libs")
-val minecraftVersion = catalog.findVersion("minecraft").get().requiredVersion
+val minecraftVersion = catalog.findVersion("neoforge-mc").get().requiredVersion
 val neoforgeVersion = catalog.findVersion("neoforge").get().requiredVersion
 
 base {
@@ -17,9 +22,19 @@ java {
     }
 }
 
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<Jar> {
+    from(rootDir.parentFile.resolve("LICENSE")) {
+        rename { "${it}_DisableVillagerTrade" }
+    }
+}
+
 neoForge {
     version = neoforgeVersion
-    
+
     runs {
         create("client") {
             client()
@@ -28,7 +43,7 @@ neoForge {
             server()
         }
     }
-    
+
     mods {
         create("disablevillagertrade") {
             sourceSet(sourceSets.main.get())
@@ -38,11 +53,13 @@ neoForge {
 
 repositories {
     maven("https://maven.neoforged.net/releases/")
+    mavenCentral()
 }
 
 dependencies {
-    implementation(project(":common"))
-    jarJar(project(":common"))
+    // common module is substituted by the includeBuild in settings.gradle.kts
+    implementation("me.dodo:disablevillagertrade-common")
+    jarJar("me.dodo:disablevillagertrade-common")
 }
 
 tasks {

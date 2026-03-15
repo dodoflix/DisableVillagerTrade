@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,7 +109,7 @@ public class DisableVillagerTradeFabric implements ModInitializer {
      * Uses op level check (level 2 = operator).
      */
     public static boolean hasPermission(ServerPlayer player, String permission) {
-        return player.hasPermissions(2);
+        return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
     }
     
     public static DisableVillagerTradeFabric getInstance() {

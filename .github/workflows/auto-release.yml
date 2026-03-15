@@ -12,11 +12,11 @@ permissions:
 env:
   JAVA_VERSION: '21'
   FORGE_MC_VERSIONS: |
-    1.21.10
+    1.21.11
   FABRIC_MC_VERSIONS: |
-    1.21.10
+    1.21.11
   NEOFORGE_MC_VERSIONS: |
-    1.21.10
+    1.21.11
   BUKKIT_MC_VERSIONS: |
     1.14
     1.14.1
@@ -60,6 +60,7 @@ env:
     1.21.8
     1.21.9
     1.21.10
+    1.21.11
 
 jobs:
   check-changes:
@@ -216,15 +217,33 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
-          cache: gradle
-      
+
+      - uses: gradle/actions/setup-gradle@v4
+
       - name: Grant execute permission
-        run: chmod +x gradlew
+        run: chmod +x gradlew bukkit/gradlew fabric/gradlew forge/gradlew neoforge/gradlew
       
-      - name: Run unit tests
+      - name: Run common unit tests
+        run: ./gradlew :common:test --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
+
+      - name: Run bukkit unit tests
+        working-directory: bukkit
         run: ./gradlew test --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
-      
-      - name: Build all platforms
+
+      - name: Build Bukkit
+        working-directory: bukkit
+        run: ./gradlew build --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
+
+      - name: Build Fabric
+        working-directory: fabric
+        run: ./gradlew build --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
+
+      - name: Build Forge
+        working-directory: forge
+        run: ./gradlew build --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
+
+      - name: Build NeoForge
+        working-directory: neoforge
         run: ./gradlew build --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
       
       - name: Upload Bukkit artifact
@@ -452,18 +471,26 @@ jobs:
           name: forge-jar
           path: forge-build
       
-      - name: Setup Forge server
+      - name: Cache Forge server installation
+        id: forge-server-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/forge-server-base
+          key: forge-server-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Download and install Forge server
+        if: steps.forge-server-cache.outputs.cache-hit != 'true'
+        run: |
+          FORGE_VERSION=$(grep -E '^forge = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
+          curl -f -o forge-installer.jar \
+            "https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar"
+          mkdir -p ~/forge-server-base
+          java -jar forge-installer.jar --installServer ~/forge-server-base
+
+      - name: Setup test server
         run: |
           mkdir -p test-server/mods
-          FORGE_VERSION=$(grep -E '^forge = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
-          echo "Using Forge version: $FORGE_VERSION"
-          
-          FORGE_URL="https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar"
-          echo "Downloading from: $FORGE_URL"
-          curl -f -o forge-installer.jar "$FORGE_URL"
-          
-          java -jar forge-installer.jar --installServer test-server
-          
+          cp -r ~/forge-server-base/. test-server/
           find forge-build -name "*.jar" ! -name "*-sources.jar" ! -name "*-slim.jar" -exec cp {} test-server/mods/ \;
           echo "eula=true" > test-server/eula.txt
           echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
@@ -539,17 +566,26 @@ jobs:
           name: neoforge-jar
           path: neoforge-build
       
-      - name: Setup NeoForge server
+      - name: Cache NeoForge server installation
+        id: neoforge-server-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/neoforge-server-base
+          key: neoforge-server-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Download and install NeoForge server
+        if: steps.neoforge-server-cache.outputs.cache-hit != 'true'
+        run: |
+          NEOFORGE_VERSION=$(grep '^neoforge = ' gradle/libs.versions.toml | cut -d'"' -f2)
+          curl -f -o neoforge-installer.jar \
+            "https://maven.neoforged.net/releases/net/neoforged/neoforge/${NEOFORGE_VERSION}/neoforge-${NEOFORGE_VERSION}-installer.jar"
+          mkdir -p ~/neoforge-server-base
+          java -jar neoforge-installer.jar --installServer ~/neoforge-server-base
+
+      - name: Setup test server
         run: |
           mkdir -p test-server/mods
-          NEOFORGE_VERSION=$(grep '^neoforge = ' gradle/libs.versions.toml | cut -d'"' -f2)
-          echo "Using NeoForge version: $NEOFORGE_VERSION"
-          
-          NEOFORGE_URL="https://maven.neoforged.net/releases/net/neoforged/neoforge/${NEOFORGE_VERSION}/neoforge-${NEOFORGE_VERSION}-installer.jar"
-          echo "Downloading from: $NEOFORGE_URL"
-          curl -f -o neoforge-installer.jar "$NEOFORGE_URL"
-          java -jar neoforge-installer.jar --installServer test-server
-          
+          cp -r ~/neoforge-server-base/. test-server/
           find neoforge-build -name "*.jar" ! -name "*-sources.jar" ! -name "*-slim.jar" -exec cp {} test-server/mods/ \;
           echo "eula=true" > test-server/eula.txt
           echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
@@ -726,9 +762,9 @@ jobs:
             | Platform | File | Minecraft Version |
             |----------|------|-------------------|
             | **Bukkit/Spigot/Paper** | `DisableVillagerTrade-Bukkit-${{ needs.check-changes.outputs.new_version }}.jar` | 1.14+ |
-            | **Fabric** | `DisableVillagerTrade-Fabric-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.10 |
-            | **Forge** | `DisableVillagerTrade-Forge-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.10 |
-            | **NeoForge** | `DisableVillagerTrade-NeoForge-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.10 |
+            | **Fabric** | `DisableVillagerTrade-Fabric-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.11 |
+            | **Forge** | `DisableVillagerTrade-Forge-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.11 |
+            | **NeoForge** | `DisableVillagerTrade-NeoForge-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.11 |
           files: release-artifacts/*.jar
           draft: false
           prerelease: ${{ needs.check-changes.outputs.is_production != 'true' }}
@@ -799,4 +835,14 @@ jobs:
           loaders: |
             neoforge
           game-versions: ${{ env.NEOFORGE_MC_VERSIONS }}
+        continue-on-error: true
+
+      - name: Update Modrinth project description
+        if: needs.check-changes.outputs.is_production == 'true'
+        run: |
+          curl -s -X PATCH \
+            "https://api.modrinth.com/v2/project/${{ vars.MODRINTH_PROJECT_ID }}" \
+            -H "Authorization: ${{ secrets.MODRINTH_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"body\": $(jq -Rs . < .modrinth/description.md)}"
         continue-on-error: true

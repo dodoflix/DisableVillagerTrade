@@ -1,9 +1,5 @@
 pluginManagement {
     repositories {
-        maven("https://maven.fabricmc.net/") { name = "Fabric" }
-        maven("https://maven.architectury.dev/") { name = "Architectury" }
-        maven("https://maven.minecraftforge.net/") { name = "Forge" }
-        maven("https://maven.neoforged.net/releases/") { name = "NeoForge" }
         gradlePluginPortal()
         mavenCentral()
     }
@@ -11,8 +7,10 @@ pluginManagement {
 
 rootProject.name = "DisableVillagerTrade"
 
+// common is a regular subproject — shared logic and unit tests
 include("common")
-include("bukkit")
-include("fabric")
-include("forge")
-include("neoforge")
+
+// Platform modules are independent builds, each with their own Gradle wrapper:
+//   bukkit, forge, neoforge → gradle-8.14.3 (forge/gradle/wrapper/gradle-wrapper.properties)
+//   fabric                  → gradle-9.2.0  (fabric/gradle/wrapper/gradle-wrapper.properties)
+// Run them from their own directories: `cd fabric && ./gradlew build`

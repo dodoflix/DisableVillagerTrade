@@ -1,0 +1,492 @@
+name: CI
+
+on:
+  push:
+    branches: [master, develop, 'feature/**', 'fix/**']
+  pull_request:
+    branches: [master, develop]
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: '21'
+
+jobs:
+  check-changes:
+    name: Check for Code Changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_test: ${{ steps.changes.outputs.should_test }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Check for code file changes
+        id: changes
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
+
+          if [[ "$COMMIT_MSG" == *"[skip ci]"* ]] || [[ "$COMMIT_MSG" == *"[ci skip]"* ]]; then
+            echo "⏭️ Skipping due to [skip ci]"
+            echo "should_test=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [[ "$COMMIT_MSG" == *"[force deploy]"* ]] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "✅ Force run"
+            echo "should_test=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          SHOULD_TEST="false"
+          while IFS= read -r file; do
+            if [[ "$file" == */src/main/java/* ]] || \
+               [[ "$file" == */src/main/resources/* ]] || \
+               [[ "$file" == */src/test/* ]] || \
+               [[ "$file" == common/* ]] || \
+               [[ "$file" == bukkit/* ]] || \
+               [[ "$file" == fabric/* ]] || \
+               [[ "$file" == forge/* ]] || \
+               [[ "$file" == neoforge/* ]] || \
+               [[ "$file" == "build.gradle.kts" ]] || \
+               [[ "$file" == "settings.gradle.kts" ]] || \
+               [[ "$file" == "gradle.properties" ]] || \
+               [[ "$file" == "gradle/libs.versions.toml" ]] || \
+               [[ "$file" == */build.gradle.kts ]]; then
+              SHOULD_TEST="true"
+              echo "✅ Code file changed: $file"
+              break
+            fi
+          done <<< "$CHANGED_FILES"
+
+          echo "should_test=$SHOULD_TEST" >> $GITHUB_OUTPUT
+          echo "Should test: $SHOULD_TEST"
+
+  # ─── Unit tests ──────────────────────────────────────────────────────────
+
+  test-unit:
+    name: 🧪 Unit Tests
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew bukkit/gradlew
+      - name: Run common tests
+        run: ./gradlew :common:test --no-daemon
+      - name: Run bukkit tests
+        working-directory: bukkit
+        run: ./gradlew test --no-daemon
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: '**/build/reports/tests/'
+
+  # ─── Per-platform parallel builds ────────────────────────────────────────
+
+  build-bukkit:
+    name: 🪣 Build Bukkit
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x bukkit/gradlew
+      - working-directory: bukkit
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DisableVillagerTrade-Bukkit
+          path: bukkit/build/libs/*.jar
+          retention-days: 7
+
+  build-fabric:
+    name: 🧵 Build Fabric
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x fabric/gradlew
+      - working-directory: fabric
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DisableVillagerTrade-Fabric
+          path: fabric/build/libs/*.jar
+          retention-days: 7
+
+  build-forge:
+    name: 🔥 Build Forge
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x forge/gradlew
+      - working-directory: forge
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DisableVillagerTrade-Forge
+          path: forge/build/libs/*.jar
+          retention-days: 7
+
+  build-neoforge:
+    name: ⚒️ Build NeoForge
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x neoforge/gradlew
+      - working-directory: neoforge
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DisableVillagerTrade-NeoForge
+          path: neoforge/build/libs/*.jar
+          retention-days: 7
+
+  # ─── Integration tests (PR and manual dispatch only) ─────────────────────
+  # Each test starts as soon as its own platform build finishes.
+  # Artifacts are reused from the build jobs above — no double build.
+
+  test-bukkit:
+    name: 🪣 Test Bukkit/Paper
+    needs: build-bukkit
+    if: needs.build-bukkit.result == 'success' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: actions/download-artifact@v8
+        with:
+          name: DisableVillagerTrade-Bukkit
+          path: bukkit-build
+
+      - name: Download Paper server
+        run: |
+          mkdir -p test-server/plugins
+          MC_VERSION=$(grep -E '^minecraft = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
+          PAPER_BUILD=$(curl -s "https://api.papermc.io/v2/projects/paper/versions/${MC_VERSION}/builds" | jq -r '.builds[-1].build')
+          if [ -z "$PAPER_BUILD" ] || [ "$PAPER_BUILD" = "null" ]; then
+            MC_VERSION=$(curl -s "https://api.papermc.io/v2/projects/paper" | jq -r '.versions[-1]')
+            PAPER_BUILD=$(curl -s "https://api.papermc.io/v2/projects/paper/versions/${MC_VERSION}/builds" | jq -r '.builds[-1].build')
+          fi
+          curl -o test-server/paper.jar \
+            "https://api.papermc.io/v2/projects/paper/versions/${MC_VERSION}/builds/${PAPER_BUILD}/downloads/paper-${MC_VERSION}-${PAPER_BUILD}.jar"
+          find bukkit-build -name "*.jar" ! -name "*-slim.jar" -exec cp {} test-server/plugins/ \;
+          echo "eula=true" > test-server/eula.txt
+          echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
+
+      - name: Start Paper server and verify plugin loads
+        timeout-minutes: 5
+        run: |
+          cd test-server
+          java -Xmx1G -jar paper.jar --nogui &
+          SERVER_PID=$!
+          for i in {1..120}; do
+            if grep -q "Done" logs/latest.log 2>/dev/null; then echo "✅ Server started!"; break; fi
+            if ! kill -0 $SERVER_PID 2>/dev/null; then echo "❌ Server crashed!"; cat logs/latest.log; exit 1; fi
+            sleep 1
+          done
+          grep -qi "DisableVillagerTrade" logs/latest.log || { echo "❌ Plugin failed to load!"; cat logs/latest.log; exit 1; }
+          grep -qiE "(ERROR|SEVERE).*DisableVillagerTrade" logs/latest.log && { echo "❌ Plugin has errors!"; exit 1; } || true
+          kill $SERVER_PID 2>/dev/null || true
+          echo "✅ Bukkit integration test passed!"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: paper-server-logs
+          path: test-server/logs/
+
+  test-fabric:
+    name: 🧵 Test Fabric
+    needs: build-fabric
+    if: needs.build-fabric.result == 'success' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: actions/download-artifact@v8
+        with:
+          name: DisableVillagerTrade-Fabric
+          path: fabric-build
+
+      - name: Download Fabric server
+        run: |
+          mkdir -p test-server/mods
+          MC_VERSION=$(grep -E '^minecraft = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
+          curl -o fabric-installer.jar "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar"
+          java -jar fabric-installer.jar server -mcversion $MC_VERSION -dir test-server -downloadMinecraft
+          FABRIC_API_URL=$(curl -s "https://api.modrinth.com/v2/project/fabric-api/version?game_versions=%5B%22${MC_VERSION}%22%5D&loaders=%5B%22fabric%22%5D" | jq -r '.[0].files[0].url')
+          if [ -n "$FABRIC_API_URL" ] && [ "$FABRIC_API_URL" != "null" ]; then
+            curl -L -o test-server/mods/fabric-api.jar "$FABRIC_API_URL"
+          fi
+          find fabric-build -name "*.jar" ! -name "*-dev.jar" ! -name "*-sources.jar" -exec cp {} test-server/mods/ \;
+          echo "eula=true" > test-server/eula.txt
+          echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
+
+      - name: Start Fabric server and verify mod loads
+        timeout-minutes: 5
+        run: |
+          cd test-server
+          java -Xmx1G -jar fabric-server-launch.jar --nogui &
+          SERVER_PID=$!
+          for i in {1..120}; do
+            if grep -q "Done" logs/latest.log 2>/dev/null; then echo "✅ Server started!"; break; fi
+            if ! kill -0 $SERVER_PID 2>/dev/null; then echo "❌ Server crashed!"; cat logs/latest.log; exit 1; fi
+            sleep 1
+          done
+          grep -qiE "(ERROR|FATAL).*disablevillagertrade" logs/latest.log && { echo "❌ Mod has errors!"; exit 1; } || true
+          kill $SERVER_PID 2>/dev/null || true
+          echo "✅ Fabric integration test passed!"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fabric-server-logs
+          path: test-server/logs/
+
+  test-forge:
+    name: 🔥 Test Forge
+    needs: build-forge
+    if: needs.build-forge.result == 'success' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: actions/download-artifact@v8
+        with:
+          name: DisableVillagerTrade-Forge
+          path: forge-build
+
+      - name: Cache Forge server installation
+        id: forge-server-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/forge-server-base
+          key: forge-server-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Download and install Forge server
+        if: steps.forge-server-cache.outputs.cache-hit != 'true'
+        run: |
+          FORGE_VERSION=$(grep -E '^forge = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
+          curl -f -o forge-installer.jar \
+            "https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar"
+          mkdir -p ~/forge-server-base
+          java -jar forge-installer.jar --installServer ~/forge-server-base
+
+      - name: Setup test server
+        run: |
+          mkdir -p test-server/mods
+          cp -r ~/forge-server-base/. test-server/
+          find forge-build -name "*.jar" ! -name "*-sources.jar" ! -name "*-slim.jar" -exec cp {} test-server/mods/ \;
+          echo "eula=true" > test-server/eula.txt
+          echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
+
+      - name: Start Forge server and verify mod loads
+        timeout-minutes: 8
+        run: |
+          cd test-server
+          if [ -f "run.sh" ]; then
+            chmod +x run.sh && ./run.sh --nogui &
+          else
+            java -Xmx2G @user_jvm_args.txt @libraries/net/minecraftforge/forge/*/unix_args.txt --nogui &
+          fi
+          SERVER_PID=$!
+          for i in {1..150}; do
+            if grep -q "Done" logs/latest.log 2>/dev/null; then echo "✅ Server started!"; break; fi
+            if ! kill -0 $SERVER_PID 2>/dev/null; then echo "❌ Server crashed!"; cat logs/latest.log; exit 1; fi
+            sleep 1
+          done
+          grep -qiE "(ERROR|FATAL).*disablevillagertrade" logs/latest.log && { echo "❌ Mod has errors!"; exit 1; } || true
+          kill $SERVER_PID 2>/dev/null || true
+          echo "✅ Forge integration test passed!"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: forge-server-logs
+          path: test-server/logs/
+
+  test-neoforge:
+    name: ⚒️ Test NeoForge
+    needs: build-neoforge
+    if: needs.build-neoforge.result == 'success' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: actions/download-artifact@v8
+        with:
+          name: DisableVillagerTrade-NeoForge
+          path: neoforge-build
+
+      - name: Cache NeoForge server installation
+        id: neoforge-server-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/neoforge-server-base
+          key: neoforge-server-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Download and install NeoForge server
+        if: steps.neoforge-server-cache.outputs.cache-hit != 'true'
+        run: |
+          NEOFORGE_VERSION=$(grep '^neoforge = ' gradle/libs.versions.toml | cut -d'"' -f2)
+          curl -f -o neoforge-installer.jar \
+            "https://maven.neoforged.net/releases/net/neoforged/neoforge/${NEOFORGE_VERSION}/neoforge-${NEOFORGE_VERSION}-installer.jar"
+          mkdir -p ~/neoforge-server-base
+          java -jar neoforge-installer.jar --installServer ~/neoforge-server-base
+
+      - name: Setup test server
+        run: |
+          mkdir -p test-server/mods
+          cp -r ~/neoforge-server-base/. test-server/
+          find neoforge-build -name "*.jar" ! -name "*-sources.jar" ! -name "*-slim.jar" -exec cp {} test-server/mods/ \;
+          echo "eula=true" > test-server/eula.txt
+          echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
+
+      - name: Start NeoForge server and verify mod loads
+        timeout-minutes: 8
+        run: |
+          cd test-server
+          if [ -f "run.sh" ]; then
+            chmod +x run.sh && ./run.sh --nogui &
+          else
+            java -Xmx2G @user_jvm_args.txt @libraries/net/neoforged/neoforge/*/unix_args.txt --nogui &
+          fi
+          SERVER_PID=$!
+          for i in {1..180}; do
+            if grep -q "Done" logs/latest.log 2>/dev/null; then echo "✅ Server started!"; break; fi
+            if ! kill -0 $SERVER_PID 2>/dev/null; then echo "❌ Server crashed!"; cat logs/latest.log; exit 1; fi
+            sleep 1
+          done
+          grep -qiE "(ERROR|FATAL).*disablevillagertrade" logs/latest.log && { echo "❌ Mod has errors!"; exit 1; } || true
+          kill $SERVER_PID 2>/dev/null || true
+          echo "✅ NeoForge integration test passed!"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: neoforge-server-logs
+          path: test-server/logs/
+
+  # ─── Summary ─────────────────────────────────────────────────────────────
+
+  summary:
+    name: 📊 CI Summary
+    needs: [check-changes, test-unit, build-bukkit, build-fabric, build-forge, build-neoforge, test-bukkit, test-fabric, test-forge, test-neoforge]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate summary
+        env:
+          RESULT_UNIT:     ${{ needs.test-unit.result }}
+          RESULT_BUKKIT:   ${{ needs.build-bukkit.result }}
+          RESULT_FABRIC:   ${{ needs.build-fabric.result }}
+          RESULT_FORGE:    ${{ needs.build-forge.result }}
+          RESULT_NEOFORGE: ${{ needs.build-neoforge.result }}
+          RESULT_T_BUKKIT:   ${{ needs.test-bukkit.result }}
+          RESULT_T_FABRIC:   ${{ needs.test-fabric.result }}
+          RESULT_T_FORGE:    ${{ needs.test-forge.result }}
+          RESULT_T_NEOFORGE: ${{ needs.test-neoforge.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          SHOULD_TEST: ${{ needs.check-changes.outputs.should_test }}
+        run: |
+          status() { case "$1" in success) echo "✅ Passed" ;; skipped) echo "⏭️ Skipped" ;; *) echo "❌ Failed ($1)" ;; esac; }
+
+          echo "## 🏗️ CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$SHOULD_TEST" != "true" ]; then
+            echo "⏭️ Skipped — no relevant code changes." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests       | $(status "$RESULT_UNIT") |"     >> $GITHUB_STEP_SUMMARY
+          echo "| Bukkit Build     | $(status "$RESULT_BUKKIT") |"   >> $GITHUB_STEP_SUMMARY
+          echo "| Fabric Build     | $(status "$RESULT_FABRIC") |"   >> $GITHUB_STEP_SUMMARY
+          echo "| Forge Build      | $(status "$RESULT_FORGE") |"    >> $GITHUB_STEP_SUMMARY
+          echo "| NeoForge Build   | $(status "$RESULT_NEOFORGE") |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Integration Tests" >> $GITHUB_STEP_SUMMARY
+            echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Bukkit/Paper | $(status "$RESULT_T_BUKKIT") |"   >> $GITHUB_STEP_SUMMARY
+            echo "| Fabric       | $(status "$RESULT_T_FABRIC") |"   >> $GITHUB_STEP_SUMMARY
+            echo "| Forge        | $(status "$RESULT_T_FORGE") |"    >> $GITHUB_STEP_SUMMARY
+            echo "| NeoForge     | $(status "$RESULT_T_NEOFORGE") |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> 📦 Build artifacts available in the Actions artifacts section." >> $GITHUB_STEP_SUMMARY
+
+          for result in "$RESULT_UNIT" "$RESULT_BUKKIT" "$RESULT_FABRIC" "$RESULT_FORGE" "$RESULT_NEOFORGE" \
+                        "$RESULT_T_BUKKIT" "$RESULT_T_FABRIC" "$RESULT_T_FORGE" "$RESULT_T_NEOFORGE"; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              exit 1
+            fi
+          done
