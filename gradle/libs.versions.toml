@@ -10,16 +10,15 @@ fabric-loader = "0.18.4"
 forge = "1.21.11-61.0.3"
 
 # NeoForge
-neoforge = "21.10.64"
-# NeoForge targets MC 1.21.10 (neoforge 21.10.x = MC 1.21.10)
-neoforge-mc = "1.21.10"
+neoforge = "21.11.38-beta"
+neoforge-mc = "1.21.11"
 
 # Bukkit/Spigot
 spigot-api = "1.21.11-R0.1-SNAPSHOT"
 
 # Plugins
 fabric-loom = "1.15.5"
-neoforge-moddev = "2.0.134"
+neoforge-moddev = "2.0.140"
 shadow = "9.3.0"
 
 # Testing

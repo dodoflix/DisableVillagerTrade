@@ -5,6 +5,7 @@ import me.dodo.disablevillagertrade.common.TradeBlocker;
 import me.dodo.disablevillagertrade.common.UpdateChecker;
 import me.dodo.disablevillagertrade.neoforge.config.NeoForgeConfig;
 import me.dodo.disablevillagertrade.neoforge.events.VillagerTradeHandler;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
@@ -95,7 +96,7 @@ public class DisableVillagerTradeNeoForge {
         if (event.getEntity() instanceof ServerPlayer player) {
             if (NeoForgeConfig.NOTIFY_ON_JOIN.get() && updateChecker != null && updateChecker.isUpdateAvailable()) {
                 // Check if player has update permission (op level 2+)
-                if (player.hasPermissions(2)) {
+                if (player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
                     String message = NeoForgeConfig.UPDATE_MESSAGE.get()
                         .replace("%current%", updateChecker.getCurrentVersion())
                         .replace("%latest%", updateChecker.getLatestVersion());

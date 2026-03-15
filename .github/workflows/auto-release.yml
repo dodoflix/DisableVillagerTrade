@@ -16,7 +16,7 @@ env:
   FABRIC_MC_VERSIONS: |
     1.21.11
   NEOFORGE_MC_VERSIONS: |
-    1.21.10
+    1.21.11
   BUKKIT_MC_VERSIONS: |
     1.14
     1.14.1
@@ -746,7 +746,7 @@ jobs:
             | **Bukkit/Spigot/Paper** | `DisableVillagerTrade-Bukkit-${{ needs.check-changes.outputs.new_version }}.jar` | 1.14+ |
             | **Fabric** | `DisableVillagerTrade-Fabric-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.11 |
             | **Forge** | `DisableVillagerTrade-Forge-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.11 |
-            | **NeoForge** | `DisableVillagerTrade-NeoForge-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.10 |
+            | **NeoForge** | `DisableVillagerTrade-NeoForge-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.11 |
           files: release-artifacts/*.jar
           draft: false
           prerelease: ${{ needs.check-changes.outputs.is_production != 'true' }}

@@ -13,7 +13,7 @@ DisableVillagerTrade is a lightweight mod/plugin crafted to block trading intera
 | **Bukkit/Spigot/Paper** | 1.14 - 1.21.11+ | ✅ Full Support |
 | **Fabric** | 1.21.11 | ✅ Full Support |
 | **Forge** | 1.21.11 | ✅ Full Support |
-| **NeoForge** | 1.21.10 | ✅ Full Support |
+| **NeoForge** | 1.21.11 | ✅ Full Support |
 | **Quilt** | 1.21.11 | ✅ Use Fabric version |
 
 ## ✨ Key Features
