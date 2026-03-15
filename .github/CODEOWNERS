@@ -1,0 +1,10 @@
+# Code owners — auto-requested for review on PRs
+
+# Default owner for all files
+* @dodoflix
+
+# CI/CD — maintainer approval required
+.github/workflows/ @dodoflix
+
+# Core business logic — stricter review
+common/ @dodoflix

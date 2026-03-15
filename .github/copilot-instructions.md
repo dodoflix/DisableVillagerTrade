@@ -158,7 +158,7 @@ Format: `should<Outcome>_when<Condition>`
 
 ## Conventional Commits
 
-Every commit message **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. The `auto-release.yml` workflow parses commit messages to determine the next version, so correct types are critical.
+Every commit message **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. The `auto-release.yml` caller (via `mc-multiplatform-toolkit`) parses commit messages to determine the next version, so correct types are critical.
 
 ### Format
 
@@ -236,9 +236,12 @@ Do **not** add `Co-authored-by:` or any automated-author trailers to commit mess
 
 ## CI/CD
 
-- **test.yml** — runs on push/PR; builds all platforms + unit tests + JaCoCo coverage
-- **integration-test.yml** — spins up real Paper/Fabric/Forge/NeoForge servers and validates the mod loads without errors
-- **auto-release.yml** — automated versioning and Modrinth publishing; version bump is derived from commit types (see Conventional Commits above)
+Workflows are **thin callers** delegating to [`mc-multiplatform-toolkit`](https://github.com/dodoflix/mc-multiplatform-toolkit):
+
+- **ci.yml** — calls `mc-multiplatform-toolkit/.github/workflows/ci.yml@main`; runs unit tests, parallel platform builds, and integration tests
+- **auto-release.yml** — calls `mc-multiplatform-toolkit/.github/workflows/release.yml@main`; automated versioning and Modrinth publishing; version bump is derived from commit types (see Conventional Commits above)
+
+**Never edit CI logic directly in this repo.** Changes to build/test/release logic go in the toolkit repo (`~/Projects/mc-multiplatform-toolkit`). This project's workflow files are ≤ 25 lines each.
 
 ---
 

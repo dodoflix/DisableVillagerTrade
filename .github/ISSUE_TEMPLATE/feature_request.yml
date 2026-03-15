@@ -1,0 +1,46 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea for DisableVillagerTrade? We'd love to hear it!
+
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Affected Platform(s)
+      multiple: true
+      options:
+        - Bukkit/Spigot/Paper
+        - Fabric
+        - Forge
+        - NeoForge
+        - All platforms
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: What problem does this feature solve?
+      placeholder: "Currently there's no way to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: compat
+    attributes:
+      label: Compatibility
+      options:
+        - label: This feature would be backward-compatible with existing configs
+        - label: This feature requires a config migration
