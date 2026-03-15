@@ -2,15 +2,9 @@ name: Tests & Build
 
 on:
   push:
-    branches:
-      - master
-      - develop
-      - 'feature/**'
-      - 'fix/**'
+    branches: [master, develop, 'feature/**', 'fix/**']
   pull_request:
-    branches:
-      - master
-      - develop
+    branches: [master, develop]
 
 env:
   JAVA_VERSION: '21'
@@ -22,8 +16,7 @@ jobs:
     outputs:
       should_test: ${{ steps.changes.outputs.should_test }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -31,33 +24,29 @@ jobs:
         id: changes
         run: |
           COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
-          
-          # Check for skip ci first - highest priority to skip
+
           if [[ "$COMMIT_MSG" == *"[skip ci]"* ]] || [[ "$COMMIT_MSG" == *"[ci skip]"* ]]; then
             echo "⏭️ Skipping due to [skip ci]"
             echo "should_test=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          # Check for force deploy - bypasses file change detection
+
           if [[ "$COMMIT_MSG" == *"[force deploy]"* ]]; then
             echo "✅ Force deploy requested"
             echo "should_test=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          # No overrides, check for actual file changes
+
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
           else
             CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
           fi
-          
+
           echo "Changed files:"
           echo "$CHANGED_FILES"
-          
+
           SHOULD_TEST="false"
-          
           while IFS= read -r file; do
             if [[ "$file" == */src/main/java/* ]] || \
                [[ "$file" == */src/main/resources/* ]] || \
@@ -77,100 +66,29 @@ jobs:
               break
             fi
           done <<< "$CHANGED_FILES"
-          
+
           echo "should_test=$SHOULD_TEST" >> $GITHUB_OUTPUT
           echo "Should test: $SHOULD_TEST"
 
-  # Build everything once
-  build:
-    name: 🔨 Build & Test All Platforms
+  test-unit:
+    name: 🧪 Unit Tests
     needs: check-changes
     if: needs.check-changes.outputs.should_test == 'true'
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up JDK
-        uses: actions/setup-java@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
-          cache: gradle
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew bukkit/gradlew fabric/gradlew forge/gradlew neoforge/gradlew
-
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Grant execute permission
+        run: chmod +x gradlew bukkit/gradlew
       - name: Run common tests
-        run: |
-          echo "🧪 Running common tests..."
-          ./gradlew :common:test --no-daemon
-          echo "✅ Common tests passed!"
-
+        run: ./gradlew :common:test --no-daemon
       - name: Run bukkit tests
         working-directory: bukkit
-        run: |
-          echo "🧪 Running bukkit tests..."
-          ./gradlew test --no-daemon
-          echo "✅ Bukkit tests passed!"
-
-      - name: Build Bukkit (Gradle 8)
-        working-directory: bukkit
-        run: |
-          echo "🏗️ Building Bukkit..."
-          ./gradlew build --no-daemon
-          echo "✅ Bukkit built!"
-
-      - name: Build Fabric (Gradle 9)
-        working-directory: fabric
-        run: |
-          echo "🏗️ Building Fabric..."
-          ./gradlew build --no-daemon
-          echo "✅ Fabric built!"
-
-      - name: Build Forge (Gradle 8)
-        working-directory: forge
-        run: |
-          echo "🏗️ Building Forge..."
-          ./gradlew build --no-daemon
-          echo "✅ Forge built!"
-
-      - name: Build NeoForge (Gradle 8)
-        working-directory: neoforge
-        run: |
-          echo "🏗️ Building NeoForge..."
-          ./gradlew build --no-daemon
-          echo "✅ NeoForge built!"
-
-      - name: Upload Bukkit artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: DisableVillagerTrade-Bukkit
-          path: bukkit/build/libs/*.jar
-          retention-days: 7
-
-      - name: Upload Fabric artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: DisableVillagerTrade-Fabric
-          path: fabric/build/libs/*.jar
-          retention-days: 7
-
-      - name: Upload Forge artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: DisableVillagerTrade-Forge
-          path: forge/build/libs/*.jar
-          retention-days: 7
-
-      - name: Upload NeoForge artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: DisableVillagerTrade-NeoForge
-          path: neoforge/build/libs/*.jar
-          retention-days: 7
-
+        run: ./gradlew test --no-daemon
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v7
@@ -178,16 +96,125 @@ jobs:
           name: test-results
           path: '**/build/reports/tests/'
 
+  build-bukkit:
+    name: 🪣 Build Bukkit
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x bukkit/gradlew
+      - name: Build Bukkit
+        working-directory: bukkit
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DisableVillagerTrade-Bukkit
+          path: bukkit/build/libs/*.jar
+          retention-days: 7
+
+  build-fabric:
+    name: 🧵 Build Fabric
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x fabric/gradlew
+      - name: Build Fabric
+        working-directory: fabric
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DisableVillagerTrade-Fabric
+          path: fabric/build/libs/*.jar
+          retention-days: 7
+
+  build-forge:
+    name: 🔥 Build Forge
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x forge/gradlew
+      - name: Build Forge
+        working-directory: forge
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DisableVillagerTrade-Forge
+          path: forge/build/libs/*.jar
+          retention-days: 7
+
+  build-neoforge:
+    name: ⚒️ Build NeoForge
+    needs: check-changes
+    if: needs.check-changes.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x neoforge/gradlew
+      - name: Build NeoForge
+        working-directory: neoforge
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DisableVillagerTrade-NeoForge
+          path: neoforge/build/libs/*.jar
+          retention-days: 7
+
+  summary:
+    name: 📊 Build Summary
+    needs: [check-changes, test-unit, build-bukkit, build-fabric, build-forge, build-neoforge]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
       - name: Generate build summary
         run: |
           echo "## 🏗️ Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Common | ✅ Built |" >> $GITHUB_STEP_SUMMARY
-          echo "| Bukkit/Spigot/Paper | ✅ Built |" >> $GITHUB_STEP_SUMMARY
-          echo "| Fabric | ✅ Built |" >> $GITHUB_STEP_SUMMARY
-          echo "| Forge | ✅ Built |" >> $GITHUB_STEP_SUMMARY
-          echo "| NeoForge | ✅ Built |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.check-changes.outputs.should_test }}" != "true" ]; then
+            echo "⏭️ Build skipped — no relevant code changes." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          [ "${{ needs.test-unit.result }}" == "success" ] && echo "| Unit Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY || echo "| Unit Tests | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          [ "${{ needs.build-bukkit.result }}" == "success" ] && echo "| Bukkit | ✅ Built |" >> $GITHUB_STEP_SUMMARY || echo "| Bukkit | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          [ "${{ needs.build-fabric.result }}" == "success" ] && echo "| Fabric | ✅ Built |" >> $GITHUB_STEP_SUMMARY || echo "| Fabric | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          [ "${{ needs.build-forge.result }}" == "success" ] && echo "| Forge | ✅ Built |" >> $GITHUB_STEP_SUMMARY || echo "| Forge | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          [ "${{ needs.build-neoforge.result }}" == "success" ] && echo "| NeoForge | ✅ Built |" >> $GITHUB_STEP_SUMMARY || echo "| NeoForge | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> 📦 Build artifacts are available for download in the Actions artifacts section." >> $GITHUB_STEP_SUMMARY
+          echo "> 📦 Artifacts available in the Actions artifacts section." >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.test-unit.result }}" != "success" ] || \
+             [ "${{ needs.build-bukkit.result }}" != "success" ] || \
+             [ "${{ needs.build-fabric.result }}" != "success" ] || \
+             [ "${{ needs.build-forge.result }}" != "success" ] || \
+             [ "${{ needs.build-neoforge.result }}" != "success" ]; then
+            exit 1
+          fi

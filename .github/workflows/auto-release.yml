@@ -217,8 +217,9 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
-          cache: gradle
-      
+
+      - uses: gradle/actions/setup-gradle@v4
+
       - name: Grant execute permission
         run: chmod +x gradlew bukkit/gradlew fabric/gradlew forge/gradlew neoforge/gradlew
       
@@ -229,19 +230,19 @@ jobs:
         working-directory: bukkit
         run: ./gradlew test --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
 
-      - name: Build Bukkit (Gradle 8)
+      - name: Build Bukkit
         working-directory: bukkit
         run: ./gradlew build --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
 
-      - name: Build Fabric (Gradle 9)
+      - name: Build Fabric
         working-directory: fabric
         run: ./gradlew build --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
 
-      - name: Build Forge (Gradle 8)
+      - name: Build Forge
         working-directory: forge
         run: ./gradlew build --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
 
-      - name: Build NeoForge (Gradle 8)
+      - name: Build NeoForge
         working-directory: neoforge
         run: ./gradlew build --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
       
@@ -470,18 +471,26 @@ jobs:
           name: forge-jar
           path: forge-build
       
-      - name: Setup Forge server
+      - name: Cache Forge server installation
+        id: forge-server-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/forge-server-base
+          key: forge-server-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Download and install Forge server
+        if: steps.forge-server-cache.outputs.cache-hit != 'true'
+        run: |
+          FORGE_VERSION=$(grep -E '^forge = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
+          curl -f -o forge-installer.jar \
+            "https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar"
+          mkdir -p ~/forge-server-base
+          java -jar forge-installer.jar --installServer ~/forge-server-base
+
+      - name: Setup test server
         run: |
           mkdir -p test-server/mods
-          FORGE_VERSION=$(grep -E '^forge = "[0-9]' gradle/libs.versions.toml | cut -d'"' -f2)
-          echo "Using Forge version: $FORGE_VERSION"
-          
-          FORGE_URL="https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar"
-          echo "Downloading from: $FORGE_URL"
-          curl -f -o forge-installer.jar "$FORGE_URL"
-          
-          java -jar forge-installer.jar --installServer test-server
-          
+          cp -r ~/forge-server-base/. test-server/
           find forge-build -name "*.jar" ! -name "*-sources.jar" ! -name "*-slim.jar" -exec cp {} test-server/mods/ \;
           echo "eula=true" > test-server/eula.txt
           echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
@@ -557,17 +566,26 @@ jobs:
           name: neoforge-jar
           path: neoforge-build
       
-      - name: Setup NeoForge server
+      - name: Cache NeoForge server installation
+        id: neoforge-server-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/neoforge-server-base
+          key: neoforge-server-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Download and install NeoForge server
+        if: steps.neoforge-server-cache.outputs.cache-hit != 'true'
+        run: |
+          NEOFORGE_VERSION=$(grep '^neoforge = ' gradle/libs.versions.toml | cut -d'"' -f2)
+          curl -f -o neoforge-installer.jar \
+            "https://maven.neoforged.net/releases/net/neoforged/neoforge/${NEOFORGE_VERSION}/neoforge-${NEOFORGE_VERSION}-installer.jar"
+          mkdir -p ~/neoforge-server-base
+          java -jar neoforge-installer.jar --installServer ~/neoforge-server-base
+
+      - name: Setup test server
         run: |
           mkdir -p test-server/mods
-          NEOFORGE_VERSION=$(grep '^neoforge = ' gradle/libs.versions.toml | cut -d'"' -f2)
-          echo "Using NeoForge version: $NEOFORGE_VERSION"
-          
-          NEOFORGE_URL="https://maven.neoforged.net/releases/net/neoforged/neoforge/${NEOFORGE_VERSION}/neoforge-${NEOFORGE_VERSION}-installer.jar"
-          echo "Downloading from: $NEOFORGE_URL"
-          curl -f -o neoforge-installer.jar "$NEOFORGE_URL"
-          java -jar neoforge-installer.jar --installServer test-server
-          
+          cp -r ~/neoforge-server-base/. test-server/
           find neoforge-build -name "*.jar" ! -name "*-sources.jar" ! -name "*-slim.jar" -exec cp {} test-server/mods/ \;
           echo "eula=true" > test-server/eula.txt
           echo -e "online-mode=false\nspawn-protection=0\nmax-tick-time=-1" > test-server/server.properties
