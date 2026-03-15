@@ -67,11 +67,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.changes.outputs.should_deploy }}
+      new_version: ${{ steps.new_version.outputs.new_version }}
+      is_production: ${{ steps.release_type.outputs.is_production }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Check for plugin file changes
         id: changes
@@ -120,6 +122,85 @@ jobs:
           echo "should_deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
           echo "Should deploy: $SHOULD_DEPLOY"
 
+      - name: Determine release type
+        id: release_type
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          
+          if [ "$BRANCH" = "master" ]; then
+            echo "is_production=true" >> $GITHUB_OUTPUT
+            echo "📦 Production Release"
+          else
+            echo "is_production=false" >> $GITHUB_OUTPUT
+            echo "🔧 Development Build"
+          fi
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(grep "^modVersion=" gradle.properties | cut -d'=' -f2 | tr -d '\r\n')
+          if [ -z "$VERSION" ]; then
+            VERSION=$(grep "^mod_version=" gradle.properties | cut -d'=' -f2 | tr -d '\r\n')
+          fi
+          VERSION=$(echo "$VERSION" | sed 's/-dev.*//g' | sed 's/-SNAPSHOT//g')
+          
+          if [ -z "$VERSION" ]; then
+            VERSION="1.15.0"
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Determine version bump from commits
+        id: bump
+        run: |
+          LAST_TAG=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname | grep -v "dev" | head -n1 || echo "")
+          
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"%s" --no-merges)
+          else
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" --no-merges)
+          fi
+          
+          BUMP_TYPE="patch"
+          
+          if echo "$COMMITS" | grep -qiE "^(BREAKING CHANGE|.*!:)"; then
+            BUMP_TYPE="major"
+          elif echo "$COMMITS" | grep -qiE "^(feat|feature)(\(.*\))?:"; then
+            BUMP_TYPE="minor"
+          fi
+          
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          BUMP_TYPE="${{ steps.bump.outputs.bump_type }}"
+          IS_PRODUCTION="${{ steps.release_type.outputs.is_production }}"
+          
+          if [ "$IS_PRODUCTION" = "true" ]; then
+            IFS='.' read -ra VERSION_PARTS <<< "$CURRENT"
+            MAJOR=${VERSION_PARTS[0]:-0}
+            MINOR=${VERSION_PARTS[1]:-0}
+            PATCH=${VERSION_PARTS[2]:-0}
+            
+            case $BUMP_TYPE in
+              major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+              minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+              patch) PATCH=$((PATCH + 1)) ;;
+            esac
+            
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          else
+            COMMIT_COUNT=$(git rev-list --count HEAD)
+            NEW_VERSION="${CURRENT}-dev.${COMMIT_COUNT}"
+          fi
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
   # Build everything once
   build:
     name: 🔨 Build All Platforms
@@ -141,10 +222,10 @@ jobs:
         run: chmod +x gradlew
       
       - name: Run unit tests
-        run: ./gradlew test --no-daemon
+        run: ./gradlew test --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
       
       - name: Build all platforms
-        run: ./gradlew build --no-daemon
+        run: ./gradlew build --no-daemon -PmodVersion=${{ needs.check-changes.outputs.new_version }}
       
       - name: Upload Bukkit artifact
         uses: actions/upload-artifact@v7
@@ -527,85 +608,6 @@ jobs:
         with:
           path: artifacts
 
-      - name: Determine release type
-        id: release_type
-        run: |
-          BRANCH="${GITHUB_REF#refs/heads/}"
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          
-          if [ "$BRANCH" = "master" ]; then
-            echo "is_production=true" >> $GITHUB_OUTPUT
-            echo "📦 Production Release"
-          else
-            echo "is_production=false" >> $GITHUB_OUTPUT
-            echo "🔧 Development Build"
-          fi
-
-      - name: Get current version
-        id: current_version
-        run: |
-          VERSION=$(grep "^modVersion=" gradle.properties | cut -d'=' -f2 | tr -d '\r\n')
-          if [ -z "$VERSION" ]; then
-            VERSION=$(grep "^mod_version=" gradle.properties | cut -d'=' -f2 | tr -d '\r\n')
-          fi
-          VERSION=$(echo "$VERSION" | sed 's/-dev.*//g' | sed 's/-SNAPSHOT//g')
-          
-          if [ -z "$VERSION" ]; then
-            VERSION="1.15.0"
-          fi
-          
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Current version: $VERSION"
-
-      - name: Determine version bump from commits
-        id: bump
-        run: |
-          LAST_TAG=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname | grep -v "dev" | head -n1 || echo "")
-          
-          if [ -z "$LAST_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"%s" --no-merges)
-          else
-            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" --no-merges)
-          fi
-          
-          BUMP_TYPE="patch"
-          
-          if echo "$COMMITS" | grep -qiE "^(BREAKING CHANGE|.*!:)"; then
-            BUMP_TYPE="major"
-          elif echo "$COMMITS" | grep -qiE "^(feat|feature)(\(.*\))?:"; then
-            BUMP_TYPE="minor"
-          fi
-          
-          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-
-      - name: Calculate new version
-        id: new_version
-        run: |
-          CURRENT="${{ steps.current_version.outputs.version }}"
-          BUMP_TYPE="${{ steps.bump.outputs.bump_type }}"
-          IS_PRODUCTION="${{ steps.release_type.outputs.is_production }}"
-          
-          if [ "$IS_PRODUCTION" = "true" ]; then
-            IFS='.' read -ra VERSION_PARTS <<< "$CURRENT"
-            MAJOR=${VERSION_PARTS[0]:-0}
-            MINOR=${VERSION_PARTS[1]:-0}
-            PATCH=${VERSION_PARTS[2]:-0}
-            
-            case $BUMP_TYPE in
-              major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-              minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-              patch) PATCH=$((PATCH + 1)) ;;
-            esac
-            
-            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          else
-            COMMIT_COUNT=$(git rev-list --count HEAD)
-            NEW_VERSION="${CURRENT}-dev.${COMMIT_COUNT}"
-          fi
-          
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
-
       - name: Generate changelog
         id: changelog
         run: |
@@ -653,7 +655,7 @@ jobs:
 
       - name: Collect release artifacts
         run: |
-          VERSION="${{ steps.new_version.outputs.new_version }}"
+          VERSION="${{ needs.check-changes.outputs.new_version }}"
           mkdir -p release-artifacts
           
           echo "📦 Collecting artifacts for version ${VERSION}..."
@@ -691,12 +693,12 @@ jobs:
           ls -la release-artifacts/
 
       - name: Update version and commit (production only)
-        if: steps.release_type.outputs.is_production == 'true'
+        if: needs.check-changes.outputs.is_production == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          NEW_VERSION="${{ steps.new_version.outputs.new_version }}"
+          NEW_VERSION="${{ needs.check-changes.outputs.new_version }}"
           if grep -q "^modVersion=" gradle.properties; then
             sed -i "s/^modVersion=.*/modVersion=$NEW_VERSION/" gradle.properties
           else
@@ -710,10 +712,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.new_version.outputs.new_version }}
-          name: "${{ steps.release_type.outputs.is_production == 'true' && '🚀' || '🔧' }} DisableVillagerTrade v${{ steps.new_version.outputs.new_version }}"
+          tag_name: v${{ needs.check-changes.outputs.new_version }}
+          name: "${{ needs.check-changes.outputs.is_production == 'true' && '🚀' || '🔧' }} DisableVillagerTrade v${{ needs.check-changes.outputs.new_version }}"
           body: |
-            ${{ steps.release_type.outputs.is_production == 'true' && '> **Stable Release**' || '> **Development Build** - For testing only' }} - ${{ steps.changelog.outputs.summary }}
+            ${{ needs.check-changes.outputs.is_production == 'true' && '> **Stable Release**' || '> **Development Build** - For testing only' }} - ${{ steps.changelog.outputs.summary }}
             
             ## What's Changed
             
@@ -723,25 +725,25 @@ jobs:
             
             | Platform | File | Minecraft Version |
             |----------|------|-------------------|
-            | **Bukkit/Spigot/Paper** | `DisableVillagerTrade-Bukkit-${{ steps.new_version.outputs.new_version }}.jar` | 1.14+ |
-            | **Fabric** | `DisableVillagerTrade-Fabric-${{ steps.new_version.outputs.new_version }}.jar` | 1.21.10 |
-            | **Forge** | `DisableVillagerTrade-Forge-${{ steps.new_version.outputs.new_version }}.jar` | 1.21.10 |
-            | **NeoForge** | `DisableVillagerTrade-NeoForge-${{ steps.new_version.outputs.new_version }}.jar` | 1.21.10 |
+            | **Bukkit/Spigot/Paper** | `DisableVillagerTrade-Bukkit-${{ needs.check-changes.outputs.new_version }}.jar` | 1.14+ |
+            | **Fabric** | `DisableVillagerTrade-Fabric-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.10 |
+            | **Forge** | `DisableVillagerTrade-Forge-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.10 |
+            | **NeoForge** | `DisableVillagerTrade-NeoForge-${{ needs.check-changes.outputs.new_version }}.jar` | 1.21.10 |
           files: release-artifacts/*.jar
           draft: false
-          prerelease: ${{ steps.release_type.outputs.is_production != 'true' }}
+          prerelease: ${{ needs.check-changes.outputs.is_production != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Bukkit to Modrinth
-        if: steps.release_type.outputs.is_production == 'true'
+        if: needs.check-changes.outputs.is_production == 'true'
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          files: release-artifacts/DisableVillagerTrade-Bukkit-${{ steps.new_version.outputs.new_version }}.jar
-          name: v${{ steps.new_version.outputs.new_version }} (Bukkit)
-          version: ${{ steps.new_version.outputs.new_version }}-bukkit
+          files: release-artifacts/DisableVillagerTrade-Bukkit-${{ needs.check-changes.outputs.new_version }}.jar
+          name: v${{ needs.check-changes.outputs.new_version }} (Bukkit)
+          version: ${{ needs.check-changes.outputs.new_version }}-bukkit
           version-type: release
           loaders: |
             spigot
@@ -752,14 +754,14 @@ jobs:
         continue-on-error: true
 
       - name: Publish Fabric to Modrinth
-        if: steps.release_type.outputs.is_production == 'true'
+        if: needs.check-changes.outputs.is_production == 'true'
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          files: release-artifacts/DisableVillagerTrade-Fabric-${{ steps.new_version.outputs.new_version }}.jar
-          name: v${{ steps.new_version.outputs.new_version }} (Fabric)
-          version: ${{ steps.new_version.outputs.new_version }}-fabric
+          files: release-artifacts/DisableVillagerTrade-Fabric-${{ needs.check-changes.outputs.new_version }}.jar
+          name: v${{ needs.check-changes.outputs.new_version }} (Fabric)
+          version: ${{ needs.check-changes.outputs.new_version }}-fabric
           version-type: release
           loaders: |
             fabric
@@ -770,14 +772,14 @@ jobs:
         continue-on-error: true
 
       - name: Publish Forge to Modrinth
-        if: steps.release_type.outputs.is_production == 'true'
+        if: needs.check-changes.outputs.is_production == 'true'
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          files: release-artifacts/DisableVillagerTrade-Forge-${{ steps.new_version.outputs.new_version }}.jar
-          name: v${{ steps.new_version.outputs.new_version }} (Forge)
-          version: ${{ steps.new_version.outputs.new_version }}-forge
+          files: release-artifacts/DisableVillagerTrade-Forge-${{ needs.check-changes.outputs.new_version }}.jar
+          name: v${{ needs.check-changes.outputs.new_version }} (Forge)
+          version: ${{ needs.check-changes.outputs.new_version }}-forge
           version-type: release
           loaders: |
             forge
@@ -785,14 +787,14 @@ jobs:
         continue-on-error: true
 
       - name: Publish NeoForge to Modrinth
-        if: steps.release_type.outputs.is_production == 'true'
+        if: needs.check-changes.outputs.is_production == 'true'
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          files: release-artifacts/DisableVillagerTrade-NeoForge-${{ steps.new_version.outputs.new_version }}.jar
-          name: v${{ steps.new_version.outputs.new_version }} (NeoForge)
-          version: ${{ steps.new_version.outputs.new_version }}-neoforge
+          files: release-artifacts/DisableVillagerTrade-NeoForge-${{ needs.check-changes.outputs.new_version }}.jar
+          name: v${{ needs.check-changes.outputs.new_version }} (NeoForge)
+          version: ${{ needs.check-changes.outputs.new_version }}-neoforge
           version-type: release
           loaders: |
             neoforge
