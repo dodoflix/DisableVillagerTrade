@@ -100,19 +100,48 @@ jobs:
           cache: gradle
 
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+        run: chmod +x gradlew bukkit/gradlew fabric/gradlew forge/gradlew neoforge/gradlew
 
-      - name: Run all tests
+      - name: Run common tests
         run: |
-          echo "🧪 Running all tests..."
+          echo "🧪 Running common tests..."
+          ./gradlew :common:test --no-daemon
+          echo "✅ Common tests passed!"
+
+      - name: Run bukkit tests
+        working-directory: bukkit
+        run: |
+          echo "🧪 Running bukkit tests..."
           ./gradlew test --no-daemon
-          echo "✅ All tests passed!"
+          echo "✅ Bukkit tests passed!"
 
-      - name: Build all platforms
+      - name: Build Bukkit (Gradle 8)
+        working-directory: bukkit
         run: |
-          echo "🏗️ Building all platforms..."
+          echo "🏗️ Building Bukkit..."
           ./gradlew build --no-daemon
-          echo "✅ All platforms built!"
+          echo "✅ Bukkit built!"
+
+      - name: Build Fabric (Gradle 9)
+        working-directory: fabric
+        run: |
+          echo "🏗️ Building Fabric..."
+          ./gradlew build --no-daemon
+          echo "✅ Fabric built!"
+
+      - name: Build Forge (Gradle 8)
+        working-directory: forge
+        run: |
+          echo "🏗️ Building Forge..."
+          ./gradlew build --no-daemon
+          echo "✅ Forge built!"
+
+      - name: Build NeoForge (Gradle 8)
+        working-directory: neoforge
+        run: |
+          echo "🏗️ Building NeoForge..."
+          ./gradlew build --no-daemon
+          echo "✅ NeoForge built!"
 
       - name: Upload Bukkit artifact
         uses: actions/upload-artifact@v7

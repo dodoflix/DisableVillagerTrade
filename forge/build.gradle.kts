@@ -3,6 +3,11 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
+val modVersion: String by project
+val mavenGroup: String by project
+group = mavenGroup
+version = modVersion
+
 // Extract versions from catalog for use in plugin DSLs
 val forgeVersion = libs.versions.forge.get()
 // Derive Minecraft version from Forge version (e.g., "1.21.11" from "1.21.11-61.0.3")
@@ -19,9 +24,19 @@ java {
     }
 }
 
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<Jar> {
+    from(rootDir.parentFile.resolve("LICENSE")) {
+        rename { "${it}_DisableVillagerTrade" }
+    }
+}
+
 minecraft {
     mappings("official", minecraftVersion)
-    
+
     runs {
         create("client") {
             workingDirectory(project.file("run"))
@@ -33,7 +48,7 @@ minecraft {
                 }
             }
         }
-        
+
         create("server") {
             workingDirectory(project.file("run"))
             property("forge.logging.markers", "REGISTRIES")
@@ -49,14 +64,20 @@ minecraft {
 
 repositories {
     maven("https://maven.minecraftforge.net/")
+    // Minecraft libraries repo for LWJGL natives (needed on macOS)
+    maven("https://libraries.minecraft.net/") {
+        name = "Minecraft Libraries"
+        content { includeGroup("org.lwjgl") }
+    }
+    mavenCentral()
 }
 
 dependencies {
     minecraft(libs.forge)
-    
-    // Include common module
-    implementation(project(":common"))
-    shadow(project(":common"))
+
+    // common module is substituted by the includeBuild in settings.gradle.kts
+    implementation("me.dodo:disablevillagertrade-common")
+    shadow("me.dodo:disablevillagertrade-common")
 }
 
 tasks {
@@ -72,21 +93,21 @@ tasks {
             expand(props)
         }
     }
-    
+
     shadowJar {
         archiveClassifier.set("")
         configurations = listOf(project.configurations.getByName("shadow"))
         relocate("me.dodo.disablevillagertrade.common", "me.dodo.disablevillagertrade.forge.common")
-        
+
         // Exclude duplicate LICENSE files
         exclude("LICENSE")
         exclude("LICENSE.txt")
         exclude("META-INF/LICENSE")
         exclude("META-INF/LICENSE.txt")
-        
+
         // Merge service files
         mergeServiceFiles()
-        
+
         manifest {
             attributes(
                 "Specification-Title" to "DisableVillagerTrade",
@@ -98,11 +119,11 @@ tasks {
             )
         }
     }
-    
+
     jar {
         archiveClassifier.set("slim")
     }
-    
+
     build {
         dependsOn(shadowJar)
     }

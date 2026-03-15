@@ -139,12 +139,29 @@ jobs:
           cache: gradle
       
       - name: Grant execute permission
-        run: chmod +x gradlew
+        run: chmod +x gradlew bukkit/gradlew fabric/gradlew forge/gradlew neoforge/gradlew
       
-      - name: Run unit tests
+      - name: Run common unit tests
+        run: ./gradlew :common:test --no-daemon
+
+      - name: Run bukkit unit tests
+        working-directory: bukkit
         run: ./gradlew test --no-daemon
-      
-      - name: Build all platforms
+
+      - name: Build Bukkit (Gradle 8)
+        working-directory: bukkit
+        run: ./gradlew build --no-daemon
+
+      - name: Build Fabric (Gradle 9)
+        working-directory: fabric
+        run: ./gradlew build --no-daemon
+
+      - name: Build Forge (Gradle 8)
+        working-directory: forge
+        run: ./gradlew build --no-daemon
+
+      - name: Build NeoForge (Gradle 8)
+        working-directory: neoforge
         run: ./gradlew build --no-daemon
       
       - name: Upload Bukkit artifact
