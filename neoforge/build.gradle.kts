@@ -10,7 +10,7 @@ version = modVersion
 // Extract versions from catalog using explicit API (required for NeoForge plugin compatibility)
 val catalog = versionCatalogs.named("libs")
 // NeoForge 21.10.x runs on MC 1.21.10, not the shared minecraft version (1.21.11 used by Forge/Fabric)
-val minecraftVersion = catalog.findVersion("minecraft-neoforge").get().requiredVersion
+val minecraftVersion = catalog.findVersion("neoforge-mc").get().requiredVersion
 val neoforgeVersion = catalog.findVersion("neoforge").get().requiredVersion
 
 base {
