@@ -22,7 +22,7 @@ neoforge-moddev = "2.0.140"
 shadow = "9.4.0"
 
 # Testing
-junit = "6.0.1"
+junit = "6.0.3"
 mockito = "5.23.0"
 
 [libraries]
