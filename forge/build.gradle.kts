@@ -1,5 +1,6 @@
 plugins {
-    id("net.minecraftforge.gradle") version "[6.0.16,6.2)"
+    id("java")
+    id("net.minecraftforge.gradle") version "[7.0.13,8.0)"
     alias(libs.plugins.shadow)
 }
 
@@ -20,7 +21,7 @@ base {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -38,42 +39,26 @@ minecraft {
     mappings("official", minecraftVersion)
 
     runs {
-        create("client") {
-            workingDirectory(project.file("run"))
-            property("forge.logging.markers", "REGISTRIES")
-            property("forge.logging.console.level", "debug")
-            mods {
-                create("disablevillagertrade") {
-                    source(sourceSets.main.get())
-                }
-            }
+        configureEach {
+            workingDir.convention(layout.projectDirectory.dir("run"))
+            systemProperty("forge.logging.markers", "REGISTRIES")
+            systemProperty("forge.logging.console.level", "debug")
         }
 
-        create("server") {
-            workingDirectory(project.file("run"))
-            property("forge.logging.markers", "REGISTRIES")
-            property("forge.logging.console.level", "debug")
-            mods {
-                create("disablevillagertrade") {
-                    source(sourceSets.main.get())
-                }
-            }
-        }
+        register("client")
+        register("server")
     }
 }
 
 repositories {
-    maven("https://maven.minecraftforge.net/")
-    // Minecraft libraries repo for LWJGL natives (needed on macOS)
-    maven("https://libraries.minecraft.net/") {
-        name = "Minecraft Libraries"
-        content { includeGroup("org.lwjgl") }
-    }
+    minecraft.mavenizer(this)
+    maven(fg.forgeMaven)
+    maven(fg.minecraftLibsMaven)
     mavenCentral()
 }
 
 dependencies {
-    minecraft(libs.forge)
+    implementation(minecraft.dependency("net.minecraftforge:forge:$forgeVersion"))
 
     // common module is substituted by the includeBuild in settings.gradle.kts
     implementation("me.dodo:disablevillagertrade-common")

@@ -17,7 +17,7 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
  */
 public class VillagerTradeHandler {
     
-    public void onPlayerInteractEntity(PlayerInteractEvent.EntityInteract event) {
+    public void onPlayerInteractEntity(PlayerInteractEvent.EntityInteractSpecific event) {
         // Only process villager interactions
         if (!(event.getTarget() instanceof Villager villager)) {
             return;
