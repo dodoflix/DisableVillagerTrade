@@ -5,6 +5,11 @@ pluginManagement {
     }
 }
 
+plugins {
+    // Auto-provisions whatever JDK each module's toolchain needs, independent of the host JDK.
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 rootProject.name = "DisableVillagerTrade"
 
 // common is a regular subproject — shared logic and unit tests
