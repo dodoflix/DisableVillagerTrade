@@ -13,7 +13,7 @@ jobs:
     with:
       mod-name: DisableVillagerTrade
       mod-id: disablevillagertrade
-      java-version: '21'
+      java-version: '25'
       run-bukkit: true
       run-fabric: true
       run-forge: true
