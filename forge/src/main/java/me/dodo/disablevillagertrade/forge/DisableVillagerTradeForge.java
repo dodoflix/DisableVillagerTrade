@@ -64,14 +64,14 @@ public class DisableVillagerTradeForge {
         ServerStartedEvent.BUS.addListener(this::onServerStarted);
         ServerStoppingEvent.BUS.addListener(this::onServerStopping);
         PlayerEvent.PlayerLoggedInEvent.BUS.addListener(this::onPlayerJoin);
-        PlayerInteractEvent.EntityInteract.BUS.addListener(tradeHandler::onPlayerInteractEntity);
+        PlayerInteractEvent.EntityInteractSpecific.BUS.addListener(tradeHandler::onPlayerInteractEntity);
         RegisterCommandsEvent.BUS.addListener(this::onRegisterCommands);
     }
     
     public void onServerStarted(ServerStartedEvent event) {
         // Initialize update checker
         if (config.isUpdateCheckerEnabled()) {
-            String version = ModList.get()
+            String version = ModList
                 .getModContainerById(Constants.MOD_ID)
                 .map(c -> c.getModInfo().getVersion().toString())
                 .orElse("unknown");

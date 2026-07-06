@@ -6,6 +6,11 @@ pluginManagement {
     }
 }
 
+plugins {
+    // Auto-provisions the JDK 25 toolchain (required by Forge 26.2+) on machines that don't have it installed.
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
