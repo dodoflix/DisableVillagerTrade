@@ -17,7 +17,7 @@ neoforge-mc = "26.1.2"
 spigot-api = "26.2-R0.1-SNAPSHOT"
 
 # Plugins
-fabric-loom = "1.15.5"
+fabric-loom = "1.17.14"
 neoforge-moddev = "2.0.141"
 shadow = "9.4.1"
 
